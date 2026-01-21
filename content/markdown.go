@@ -2,6 +2,7 @@ package content
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/yuin/goldmark"
 	emoji "github.com/yuin/goldmark-emoji"
@@ -10,23 +11,7 @@ import (
 	"github.com/yuin/goldmark/parser"
 )
 
-// func mdToHTML(md []byte) []byte {
-// 	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
-// 	p := parser.NewWithExtensions(extensions)
-// 	doc := p.Parse(md)
-
-// 	htmlFlags := html.CommonFlags | html.HrefTargetBlank
-// 	opts := html.RendererOptions{Flags: htmlFlags}
-// 	renderer := html.NewRenderer(opts)
-// 	bodyContent := markdown.Render(doc, renderer)
-
-// 	// htmlTemplate := `%s`
-
-// 	// return []byte(fmt.Sprintf(htmlTemplate, bodyContent))
-// 	return bodyContent
-// }
-
-func mdToHTML(source []byte) []byte {
+func mdToHTML(source []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	// html output is larger than MD so add 50% to the buffer
 	buf.Grow(len(source) + (len(source) / 2))
@@ -52,9 +37,10 @@ func mdToHTML(source []byte) []byte {
 	)
 
 	if err := md.Convert(source, &buf); err != nil {
-		panic(err)
+		return []byte{}, fmt.Errorf("%w: %v", ErrMDConversion, err)
+
 	}
 
 	// worth trading CPU time for RAM?
-	return bytes.Clone(buf.Bytes())
+	return bytes.Clone(buf.Bytes()), nil
 }

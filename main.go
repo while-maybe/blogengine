@@ -17,23 +17,24 @@ type App struct {
 	Repo   *content.Repository
 	Server *http.Server
 	Logger *slog.Logger
-	stderr io.Writer
 }
-
-// TODO investigate Go library Goldmark
 
 func NewApp(blogTitle string, sourcesDir string, logger *slog.Logger, writer io.Writer) (*App, error) {
 
-	repo := content.NewPosts(blogTitle)
+	repo, err := content.NewRepository(blogTitle)
+	if err != nil {
+		return nil, fmt.Errorf("could not create repository: %w", err)
+	}
 
 	wantedFiles := "*.md"
 	files, err := filepath.Glob(filepath.Join(sourcesDir, wantedFiles))
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan sources: %w", err)
+		return nil, fmt.Errorf("failed to scan data sources: %w", err)
 	}
+
 	repo.LoadLazyMetaFromDisk(files)
 
-	h := handlers.NewBlogHandler(repo, blogTitle)
+	h := handlers.NewBlogHandler(repo, blogTitle, logger)
 
 	mux := http.NewServeMux()
 
@@ -57,7 +58,6 @@ func NewApp(blogTitle string, sourcesDir string, logger *slog.Logger, writer io.
 		Repo:   repo,
 		Server: server,
 		Logger: logger,
-		stderr: writer,
 	}, nil
 }
 

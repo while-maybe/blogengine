@@ -24,11 +24,15 @@ type Repository struct {
 	mu    sync.RWMutex
 }
 
-func NewPosts(title string) *Repository {
+func NewRepository(title string) (*Repository, error) {
+	if title == "" {
+		return nil, ErrRepositoryTitle
+	}
+
 	return &Repository{
 		title: title,
 		Data:  make(map[uint32]*Post),
-	}
+	}, nil
 }
 
 func (r *Repository) GetAll() []*Post {
@@ -50,12 +54,15 @@ func (r *Repository) GetAll() []*Post {
 	return postsList
 }
 
-func (r *Repository) Get(id uint32) (*Post, bool) {
+func (r *Repository) Get(id uint32) (*Post, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	post, ok := r.Data[id]
-	return post, ok
+	if !ok {
+		return nil, ErrPostNotFound
+	}
+	return post, nil
 }
 
 func (r *Repository) Title() string {

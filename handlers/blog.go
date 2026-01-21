@@ -3,7 +3,8 @@ package handlers
 import (
 	"blogengine/components"
 	"blogengine/content"
-	"log"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,20 +14,22 @@ import (
 
 type PostProvider interface {
 	GetAll() []*content.Post
-	Get(id uint32) (*content.Post, bool)
+	Get(id uint32) (*content.Post, error)
 }
 
 // BlogHandler holds the state
 type BlogHandler struct {
-	Title string
-	Store PostProvider
+	Title  string
+	Store  PostProvider
+	Logger *slog.Logger
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store *content.Repository, title string) *BlogHandler {
+func NewBlogHandler(store *content.Repository, title string, logger *slog.Logger) *BlogHandler {
 	return &BlogHandler{
-		Store: store,
-		Title: title,
+		Store:  store,
+		Title:  title,
+		Logger: logger,
 	}
 }
 
@@ -49,17 +52,28 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		}
 
 		// find the post
-		post, ok := h.Store.Get(uint32(id64))
-		if !ok {
-			http.NotFound(w, r)
+		post, err := h.Store.Get(uint32(id64))
+		if err != nil {
+			switch {
+			case errors.Is(err, content.ErrPostNotFound):
+				http.NotFound(w, r)
+			default:
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				slog.Error("finding post", "id", id64, "err", err)
+			}
 			return
 		}
 
 		// load content
 		htmlBytes, err := post.GetContent()
 		if err != nil {
-			log.Printf("Error loading post %s: %v", post.Title, err)
-			http.Error(w, "Internal Server Error", 500)
+			switch {
+			case errors.Is(err, content.ErrFileTooLarge):
+				http.Error(w, "post too large", http.StatusRequestEntityTooLarge)
+			default:
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+			slog.Error("handling post", "title", post.Title, "err", err)
 			return
 		}
 

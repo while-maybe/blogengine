@@ -15,9 +15,9 @@ import (
 const maxBufferSize = 32 * 1024
 const maxFileSize = 10 * 1024 * 1024
 
-func (p *Repository) LoadLazyMetaFromDisk(paths []string) {
+func (p *Repository) LoadLazyMetaFromDisk(paths []string) error {
 	if len(paths) == 0 {
-		return
+		return ErrNoFilePaths
 	}
 
 	for _, fileName := range paths {
@@ -26,8 +26,7 @@ func (p *Repository) LoadLazyMetaFromDisk(paths []string) {
 
 			file, err := os.Open(cleanPath)
 			if err != nil {
-				fmt.Printf("Error reading %s: %v\n", cleanPath, err)
-				return
+				fmt.Printf("%v: %s: %v\n", ErrReadingFile, cleanPath, err)
 			}
 			defer file.Close()
 
@@ -54,7 +53,7 @@ func (p *Repository) LoadLazyMetaFromDisk(paths []string) {
 
 			stats, err := file.Stat()
 			if err != nil {
-				fmt.Printf("could not read stats for %s, defaulting to current time\n", cleanPath)
+				fmt.Printf("%v: %s, defaulting to current time\n", ErrFileStats, cleanPath)
 			} else {
 				modified = stats.ModTime().UTC()
 			}
@@ -78,6 +77,7 @@ func (p *Repository) LoadLazyMetaFromDisk(paths []string) {
 			fmt.Printf(" -> Found: %q\n", cleanPath)
 		}()
 	}
+	return nil
 }
 
 // extractTitle is a helper to grab title from "# Title" or "Title: ..."
@@ -117,19 +117,18 @@ func (p *Post) GetContent() ([]byte, error) {
 
 	file, err := os.OpenInRoot(filepath.Split(p.Path))
 	if err != nil {
-		return nil, fmt.Errorf("could not read from file: %s", p.Path)
+		return nil, fmt.Errorf("%w: %s: %v", ErrReadingFile, p.Path, err)
 	}
 	defer file.Close()
 
 	stats, err := file.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("could not stat file: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrFileStats, err)
 	}
 
 	// Safety check for huge files
-	// TODO investigate what if I just stream the content directly to http writer?
 	if stats.Size() > maxFileSize { // 10MB limit
-		return nil, fmt.Errorf("file too large: %d bytes", stats.Size())
+		return nil, fmt.Errorf("%w: %d bytes", ErrFileTooLarge, stats.Size())
 	}
 	// use file size as buffer when smaller than max to reduce memory footprint
 	postBufferSize := min(maxBufferSize, int(stats.Size()))
@@ -139,10 +138,12 @@ func (p *Post) GetContent() ([]byte, error) {
 
 	postBytes, err := io.ReadAll(bufReader)
 	if err != nil {
-		return nil, fmt.Errorf("could not read from file %s: %w", p.Path, err)
+		return nil, fmt.Errorf("%w: %s: %v", ErrBufferError, p.Path, err)
 	}
 
 	// into cache
-	p.Content = mdToHTML(postBytes)
+	if p.Content, err = mdToHTML(postBytes); err != nil {
+		return []byte{}, fmt.Errorf("%w: %v", ErrContentUnavailable, err)
+	}
 	return p.Content, nil
 }
