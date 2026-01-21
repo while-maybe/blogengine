@@ -1,0 +1,9 @@
+.git
+bin/
+.env
+README.md
+
+# project specific ignores
+gather_code.sh
+project_cde.txt
+zDocs/

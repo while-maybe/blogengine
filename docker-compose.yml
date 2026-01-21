@@ -1,0 +1,16 @@
+services:
+  blog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blogengine
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - BLOG_TITLE=Strange Coding Blog (Docker)
+    
+    # to edit .md files on your host and see them update
+    volumes:
+      - ./sources:/root/sources
