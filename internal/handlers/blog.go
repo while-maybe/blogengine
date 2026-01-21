@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"blogengine/components"
-	"blogengine/content"
+	"blogengine/internal/components"
+	"blogengine/internal/content"
 	"errors"
 	"log/slog"
 	"net/http"

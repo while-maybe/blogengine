@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"blogengine/content"
-	"blogengine/handlers"
+	"blogengine/internal/content"
+	"blogengine/internal/handlers"
 )
 
 type App struct {
