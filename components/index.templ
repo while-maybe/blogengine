@@ -1,0 +1,22 @@
+package components
+
+import (
+    "fmt"
+    "blogengine/content"
+)
+
+templ Home(posts []*content.Post, title string) {
+    @baseTemplate(title) {
+        <h1>{ title }</h1>
+		<ul>
+			for _, p := range posts {
+				<li>
+					<a href={ templ.SafeURL(fmt.Sprintf("/post/%d", p.ID)) }>
+						{ p.Title } 
+					</a>
+					<span> - { p.ModifiedAt.Format("2006-01-02") }</span>
+				</li>
+			}
+		</ul>
+    }
+}

@@ -1,0 +1,11 @@
+package components
+
+import "time"
+
+templ footerTemplate(title string) {
+    {{year := time.Now().Year()}}
+
+    <footer>
+        {title} - Copyright {year}
+    </footer>
+}
