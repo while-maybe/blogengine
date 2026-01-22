@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: blogengine
     restart: unless-stopped
+    # good idea for quick local access
     ports:
       - "3000:3000"
     environment:
@@ -14,3 +15,15 @@ services:
     # to edit .md files on your host and see them update
     volumes:
       - ./sources:/root/sources
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+      # tunnel talks to the 'blog' container on the docker network, no exposed port here
+    depends_on:
+      - blog
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+
