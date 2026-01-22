@@ -89,6 +89,11 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.Logger.Info("draining connections...")
 	if err := a.Server.Shutdown(shutdownCtx); err != nil {
+		// graceful shutdown timed out
+		if closeErr := a.Server.Close(); closeErr != nil {
+			// both failed. Return combined error.
+			return fmt.Errorf("graceful shutdown failed: %w", errors.Join(err, closeErr))
+		}
 		return fmt.Errorf("graceful shutdown failed: %w", err)
 	}
 	a.Logger.Info("server stopped")
@@ -117,4 +122,7 @@ func main() {
 		logger.Error("server crashed", "err", err)
 		os.Exit(1)
 	}
+
+	logger.Info("application exited successfully")
+	os.Exit(0)
 }

@@ -32,7 +32,8 @@ EXPOSE 3000
 ENV PORT=3000
 ENV BLOG_TITLE="Production Blog"
 
-CMD ["./blogengine"]
+ENTRYPOINT ["./blogengine"]
+
 
 # run with:
 # docker build -t blogengine:v1 .
