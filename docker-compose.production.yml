@@ -1,0 +1,34 @@
+services:
+  blog:
+    # Use the image built by GitHub Actions
+    image: ghcr.io/while-maybe/blogengine:latest
+    container_name: blogengine
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    environment:
+      - PORT=3000
+      - BLOG_TITLE=Production Pi Blog
+    # No ports exposed (using Tunnel)
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - blog
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # force newer API for Debian Trixie
+      - DOCKER_API_VERSION=1.52
+    # check every 5 mins
+    command: --interval 300 --cleanup --label-enable
