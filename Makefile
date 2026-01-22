@@ -74,3 +74,8 @@ run:
 clean:
 	@rm -rf bin
 	@rm -f coverage.out coverage.html
+
+.PHONY: generate
+generate:
+	@echo 'Generating templates...'
+	@templ generate
