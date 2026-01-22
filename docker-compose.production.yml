@@ -27,5 +27,8 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # force newer API for Debian Trixie
+      - DOCKER_API_VERSION=1.52
     # check every 5 mins
     command: --interval 300 --cleanup --label-enable
