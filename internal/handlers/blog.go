@@ -3,6 +3,7 @@ package handlers
 import (
 	"blogengine/internal/components"
 	"blogengine/internal/content"
+	"blogengine/internal/middleware"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -19,17 +20,19 @@ type PostProvider interface {
 
 // BlogHandler holds the state
 type BlogHandler struct {
-	Title  string
-	Store  PostProvider
-	Logger *slog.Logger
+	Title    string
+	Store    PostProvider
+	Logger   *slog.Logger
+	GeoStats *middleware.GeoStats
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store *content.Repository, title string, logger *slog.Logger) *BlogHandler {
+func NewBlogHandler(store *content.Repository, title string, logger *slog.Logger, geo *middleware.GeoStats) *BlogHandler {
 	return &BlogHandler{
-		Store:  store,
-		Title:  title,
-		Logger: logger,
+		Store:    store,
+		Title:    title,
+		Logger:   logger,
+		GeoStats: geo,
 	}
 }
 
