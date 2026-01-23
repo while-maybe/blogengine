@@ -15,6 +15,7 @@ import (
 
 	"blogengine/internal/content"
 	"blogengine/internal/handlers"
+	"blogengine/internal/middleware"
 )
 
 type App struct {
@@ -23,7 +24,7 @@ type App struct {
 	Logger *slog.Logger
 }
 
-func NewApp(blogTitle string, sourcesDir string, logger *slog.Logger, writer io.Writer) (*App, error) {
+func NewApp(ctx context.Context, blogTitle string, sourcesDir string, logger *slog.Logger, writer io.Writer) (*App, error) {
 
 	repo, err := content.NewRepository(blogTitle)
 	if err != nil {
@@ -37,6 +38,8 @@ func NewApp(blogTitle string, sourcesDir string, logger *slog.Logger, writer io.
 	}
 	repo.LoadLazyMetaFromDisk(files)
 
+	limiter := middleware.NewIPRateLimiter(ctx, 10, 20, true)
+
 	h := handlers.NewBlogHandler(repo, blogTitle, logger)
 
 	mux := http.NewServeMux()
@@ -49,9 +52,17 @@ func NewApp(blogTitle string, sourcesDir string, logger *slog.Logger, writer io.
 	mux.Handle("GET /post/", h.HandlePost())
 	mux.Handle("GET /metrics", h.HandleMetrics())
 
+	defaultMiddlewareStack := []middleware.Middleware{
+		middleware.Recover(logger),
+		limiter.Middleware(logger),
+		middleware.Logger(logger),
+	}
+
+	handleChain := middleware.Chain(mux, defaultMiddlewareStack...)
+
 	server := &http.Server{
 		Addr:         ":3000",
-		Handler:      mux,
+		Handler:      handleChain,
 		ReadTimeout:  5 * time.Second,
 		IdleTimeout:  30 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -101,17 +112,21 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func main() {
+
 	stderr := os.Stderr
 	const blogTitle = "Strange coding blog"
 
 	logHandler := slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
 	logger := slog.New(logHandler).With("app", blogTitle)
 
+	// Add PID to this log line
+	logger.Info("application starting", "pid", os.Getpid())
+
 	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	// initialise
-	app, err := NewApp(blogTitle, "./sources", logger, stderr)
+	app, err := NewApp(rootCtx, blogTitle, "./sources", logger, stderr)
 	if err != nil {
 		logger.Error("server initialise", "err", err)
 		os.Exit(1)
