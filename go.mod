@@ -7,6 +7,7 @@ require (
 	github.com/yuin/goldmark v1.7.16
 	github.com/yuin/goldmark-emoji v1.0.6
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
+	golang.org/x/time v0.14.0
 )
 
 require (
