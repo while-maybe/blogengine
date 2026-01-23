@@ -35,6 +35,12 @@ func NewBlogHandler(store *content.Repository, title string, logger *slog.Logger
 
 func (h *BlogHandler) HandleIndex() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// only allow '/'
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+
 		allPosts := h.Store.GetAll()
 		blogTitle := h.Title
 
