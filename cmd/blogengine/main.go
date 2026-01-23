@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -24,7 +23,7 @@ type App struct {
 	Logger *slog.Logger
 }
 
-func NewApp(ctx context.Context, blogTitle string, sourcesDir string, logger *slog.Logger, writer io.Writer) (*App, error) {
+func NewApp(ctx context.Context, blogTitle string, sourcesDir string, logger *slog.Logger) (*App, error) {
 
 	repo, err := content.NewRepository(blogTitle)
 	if err != nil {
@@ -40,7 +39,9 @@ func NewApp(ctx context.Context, blogTitle string, sourcesDir string, logger *sl
 
 	limiter := middleware.NewIPRateLimiter(ctx, 10, 20, true)
 
-	h := handlers.NewBlogHandler(repo, blogTitle, logger)
+	geo := middleware.NewGeoStats(ctx)
+
+	h := handlers.NewBlogHandler(repo, blogTitle, logger, geo)
 
 	mux := http.NewServeMux()
 
@@ -56,6 +57,7 @@ func NewApp(ctx context.Context, blogTitle string, sourcesDir string, logger *sl
 		middleware.Recover(logger),
 		limiter.Middleware(logger),
 		middleware.Logger(logger),
+		geo.Middleware(logger),
 	}
 
 	handleChain := middleware.Chain(mux, defaultMiddlewareStack...)
@@ -126,7 +128,7 @@ func main() {
 	defer stop()
 
 	// initialise
-	app, err := NewApp(rootCtx, blogTitle, "./sources", logger, stderr)
+	app, err := NewApp(rootCtx, blogTitle, "./sources", logger)
 	if err != nil {
 		logger.Error("server initialise", "err", err)
 		os.Exit(1)

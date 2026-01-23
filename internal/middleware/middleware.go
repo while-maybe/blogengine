@@ -45,7 +45,7 @@ func Logger(logger *slog.Logger) Middleware {
 
 			next.ServeHTTP(w, r)
 
-			logger.Debug("request completed", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start))
+			logger.Info("request completed", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start))
 		})
 	}
 }
