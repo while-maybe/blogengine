@@ -44,12 +44,16 @@ services:
       - |
         apk add --no-cache git
         git config --global --add safe.directory /app
-        echo "Starting Unified Updater"
+        echo "Starting Unified Updater..."
+        
+        # Initial cleanup - remove any orphaned containers with our names
+        echo "Cleaning up any conflicting containers..."
+        docker rm -f blogengine cloudflared 2>/dev/null || true
         
         while true; do
           echo "[$(date)] Checking for updates..."
           
-          # 1. Update Code/Config from Git
+          # Update Code/Config from Git
           git fetch origin 2>/dev/null || echo "Git fetch failed, continuing..."
           LOCAL=$(git rev-parse HEAD 2>/dev/null || echo "")
           REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "")
@@ -59,13 +63,10 @@ services:
             git pull
           fi
           
-          # 2. Update Infrastructure
-          # Pull latest images and recreate containers if needed
-          # --force-recreate: Always recreate containers (like Watchtower's behavior)
-          # --quiet-pull: Don't spam logs
-          # --pull always: Always check for new images (Watchtower behavior)
-          # --remove-orphans: Clean up old containers
+          # Clean up any conflicting containers before updating
+          docker rm -f blogengine cloudflared 2>/dev/null || true
           
+          # Update Infrastructure
           docker compose -f docker-compose.production.yml pull --quiet 2>&1 | grep -v "Pulling" || true
           docker compose -f docker-compose.production.yml up -d --remove-orphans 2>&1 | \
             grep -v "Container.*Creating\|Container.*Starting\|Container.*Running" || true

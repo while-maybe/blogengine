@@ -13,28 +13,28 @@ COPY . .
 
 RUN make build
 
-# run stage (MODIFIED)
+# run stage
 FROM alpine:latest
 
-# Add non-root user (NEW)
+# Add non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Change from /root/ to /app (CHANGED)
+# Change from /root/ to /app
 WORKDIR /app
 
 COPY --from=builder /app/bin/blogengine .
 COPY --from=builder /app/static ./static
 COPY --from=builder /app/sources ./sources
 
-# Fix ownership (NEW)
+# Fix ownership
 RUN chown -R appuser:appgroup /app
 
-# Run as non-root (NEW)
+# Run as non-root
 USER appuser
 
 EXPOSE 3000
 
-# Healthcheck (NEW)
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
