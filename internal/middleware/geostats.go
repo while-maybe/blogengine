@@ -91,14 +91,8 @@ func (g *GeoStats) GetTopCountries(n int) []*CountryStat {
 	g.mu.RUnlock()
 
 	slices.SortStableFunc(topN, func(a, b *CountryStat) int {
-		switch {
-		case a.Count < b.Count:
-			return -1
-		case a.Count > b.Count:
-			return 1
-		default:
-			return 0
-		}
+		// descending order
+		return b.Count - a.Count
 	})
 
 	n = min(n, len(topN))
