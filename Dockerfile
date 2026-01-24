@@ -1,4 +1,4 @@
-# build stage 
+# build stage (unchanged)
 FROM golang:1.25-alpine AS builder
 
 RUN apk add --no-cache make git
@@ -6,36 +6,40 @@ RUN go install github.com/a-h/templ/cmd/templ@latest
 
 WORKDIR /app
 
-# download dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# copy source code
 COPY . .
 
-# build with the Makefile
 RUN make build
 
-# run stage
+# run stage (MODIFIED)
 FROM alpine:latest
 
-WORKDIR /root/
+# Add non-root user (NEW)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Change from /root/ to /app (CHANGED)
+WORKDIR /app
+
 COPY --from=builder /app/bin/blogengine .
 COPY --from=builder /app/static ./static
-
-# content -> mount as volume in production -> docker run -v $(pwd)/sources:/root/sources blogengine
 COPY --from=builder /app/sources ./sources
+
+# Fix ownership (NEW)
+RUN chown -R appuser:appgroup /app
+
+# Run as non-root (NEW)
+USER appuser
 
 EXPOSE 3000
 
-# set env vars here and run
+# Healthcheck (NEW)
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
 ENV HTTP_PORT=3000
 ENV APP_NAME="BlogEngine Default"
 ENV APP_ENV="prod"
 
 ENTRYPOINT ["./blogengine"]
-
-# run with:
-# docker build -t blogengine:v1 .
-# map port 3000 inside the container to 8080
-# docker run -p 8080:3000 blogengine:v1
