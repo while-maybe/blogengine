@@ -7,8 +7,20 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     environment:
-      - PORT=3000
-      - BLOG_TITLE=Production Pi Blog
+      - APP_NAME=${APP_NAME}
+      - APP_ENV=prod
+      - APP_SOURCES_DIR=${APP_SOURCES_DIR}
+
+      - HTTP_PORT=${HTTP_PORT}
+      - HTTP_READ_TIMEOUT=${HTTP_READ_TIMEOUT}
+      - HTTP_WRITE_TIMEOUT=${HTTP_WRITE_TIMEOUT}
+      - HTTP_IDLE_TIMEOUT=${HTTP_IDLE_TIMEOUT}
+      - HTTP_SHUTDOWN_DELAY=${HTTP_SHUTDOWN_DELAY}
+
+      - LIMITER_RPS=${LIMITER_RPS}
+      - LIMITER_BURST=${LIMITER_BURST}
+      
+      - PROXY_TRUSTED=${PROXY_TRUSTED}
     # No ports exposed (using Tunnel)
 
   tunnel:

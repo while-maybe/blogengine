@@ -9,9 +9,20 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - PORT=3000
-      - BLOG_TITLE=Strange Coding Blog (Docker)
-    
+      - APP_NAME=${APP_NAME}
+      - APP_ENV=dev
+      - APP_SOURCES_DIR=${APP_SOURCES_DIR}
+
+      - HTTP_PORT=${HTTP_PORT}
+      - HTTP_READ_TIMEOUT=${HTTP_READ_TIMEOUT}
+      - HTTP_WRITE_TIMEOUT=${HTTP_WRITE_TIMEOUT}
+      - HTTP_IDLE_TIMEOUT=${HTTP_IDLE_TIMEOUT}
+      - HTTP_SHUTDOWN_DELAY=${HTTP_SHUTDOWN_DELAY}
+
+      - LIMITER_RPS=${LIMITER_RPS}
+      - LIMITER_BURST=${LIMITER_BURST}
+      
+      - PROXY_TRUSTED=${PROXY_TRUSTED}
     # to add your own .md files on your host and see them update
     # volumes:
     #   - ./sources:/root/sources
