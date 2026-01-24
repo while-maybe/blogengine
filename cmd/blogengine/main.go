@@ -127,6 +127,15 @@ func main() {
 
 	// Add PID to this log line
 	logger.Info("application starting", "pid", os.Getpid())
+	logger.Info("configuration loaded",
+		"name", cfg.App.Name,
+		"sources", cfg.App.SourcesDir,
+		"env", cfg.App.Environment,
+		"port", cfg.HTTP.Port,
+		"rate_limit_rps", cfg.Limiter.RPS,
+		"trusted_proxy", cfg.Proxy.Trusted,
+		// Do NOT log cfg.Proxy.Token!
+	)
 
 	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
