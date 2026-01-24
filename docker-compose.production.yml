@@ -67,9 +67,8 @@ services:
           docker rm -f blogengine cloudflared 2>/dev/null || true
           
           # Update Infrastructure
-          docker compose -f docker-compose.production.yml pull --quiet 2>&1 | grep -v "Pulling" || true
-          docker compose -f docker-compose.production.yml up -d --remove-orphans 2>&1 | \
-            grep -v "Container.*Creating\|Container.*Starting\|Container.*Running" || true
+          docker compose -f docker-compose.production.yml pull --quiet 2>/dev/null || true
+          docker compose -f docker-compose.production.yml up -d --force-recreate --no-deps blog tunnel
           
           echo "[$(date)] Update check complete. Next check in 5 minutes."
           sleep 300
