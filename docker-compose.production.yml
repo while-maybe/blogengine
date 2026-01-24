@@ -43,27 +43,33 @@ services:
     command:
       - |
         apk add --no-cache git
-        echo "Starting Unified Updater..."
+        git config --global --add safe.directory /app
+        echo "Starting Unified Updater"
         
         while true; do
-          # 1. Update Code/Config from Git
-          git fetch origin
-          LOCAL=$(git rev-parse HEAD)
-          REMOTE=$(git rev-parse @{u})
+          echo "[$(date)] Checking for updates..."
           
-          if [ "$LOCAL" != "$REMOTE" ]; then
-            echo "Git configuration change detected. Pulling..."
+          # 1. Update Code/Config from Git
+          git fetch origin 2>/dev/null || echo "Git fetch failed, continuing..."
+          LOCAL=$(git rev-parse HEAD 2>/dev/null || echo "")
+          REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "")
+          
+          if [ -n "$LOCAL" ] && [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ]; then
+            echo "[$(date)] Git configuration change detected. Pulling..."
             git pull
           fi
           
           # 2. Update Infrastructure
-          # -f: Use production file
-          # --quiet-pull: Don't spam logs downloading layers
-          # --pull always: Check GHCR for new Go binary versions
-          # --remove-orphans: Kill containers that were deleted from YAML (like Watchtower)
+          # Pull latest images and recreate containers if needed
+          # --force-recreate: Always recreate containers (like Watchtower's behavior)
+          # --quiet-pull: Don't spam logs
+          # --pull always: Always check for new images (Watchtower behavior)
+          # --remove-orphans: Clean up old containers
           
-          docker compose -f docker-compose.production.yml up -d --quiet-pull --pull always --remove-orphans
+          docker compose -f docker-compose.production.yml pull --quiet 2>&1 | grep -v "Pulling" || true
+          docker compose -f docker-compose.production.yml up -d --remove-orphans 2>&1 | \
+            grep -v "Container.*Creating\|Container.*Starting\|Container.*Running" || true
           
-          # Check again in 5 minutes
+          echo "[$(date)] Update check complete. Next check in 5 minutes."
           sleep 300
         done
