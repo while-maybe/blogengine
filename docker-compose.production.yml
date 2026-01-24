@@ -1,25 +1,18 @@
 services:
   blog:
-    # Use the image built by GitHub Actions
     image: ghcr.io/while-maybe/blogengine:latest
     container_name: blogengine
     restart: unless-stopped
     environment:
-      - APP_NAME=${APP_NAME}
+      - APP_NAME=${APP_NAME:-"give me a name :("}
       - APP_ENV=prod
-      - APP_SOURCES_DIR=${APP_SOURCES_DIR}
-
-      - HTTP_PORT=${HTTP_PORT}
-      - HTTP_READ_TIMEOUT=${HTTP_READ_TIMEOUT}
-      - HTTP_WRITE_TIMEOUT=${HTTP_WRITE_TIMEOUT}
-      - HTTP_IDLE_TIMEOUT=${HTTP_IDLE_TIMEOUT}
-      - HTTP_SHUTDOWN_DELAY=${HTTP_SHUTDOWN_DELAY}
-
-      - LIMITER_RPS=${LIMITER_RPS}
-      - LIMITER_BURST=${LIMITER_BURST}
-      
-      - PROXY_TRUSTED=${PROXY_TRUSTED}
-    # No ports exposed (using Tunnel)
+      - APP_SOURCES_DIR=${APP_SOURCES_DIR:-./sources}
+      - HTTP_PORT=${HTTP_PORT:-3000}
+      - LIMITER_RPS=${LIMITER_RPS:-20}
+      - LIMITER_BURST=${LIMITER_BURST:-50}
+      - PROXY_TRUSTED=${PROXY_TRUSTED:-true}
+    networks:
+      - blog_net
 
   tunnel:
     image: cloudflare/cloudflared:latest
@@ -30,6 +23,8 @@ services:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     depends_on:
       - blog
+    networks:
+      - blog_net
 
   updater:
     image: docker:cli
@@ -39,31 +34,60 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/app
     working_dir: /app
+    environment:
+      - COMPOSE_PROJECT_NAME=blog
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         apk add --no-cache git
-        echo "Starting Unified Updater..."
+        git config --global --add safe.directory /app
+
+        TARGET_IMAGE="ghcr.io/while-maybe/blogengine:latest"
+        
+        echo "GitOps Updater starting..."
         
         while true; do
-          # 1. Update Code/Config from Git
-          git fetch origin
-          LOCAL=$(git rev-parse HEAD)
-          REMOTE=$(git rev-parse @{u})
+          NEEDS_UPDATE=0
+          echo "[$(date)] Checking for updates..."
           
-          if [ "$LOCAL" != "$REMOTE" ]; then
-            echo "Git configuration change detected. Pulling..."
+          # check git (config)
+          git fetch origin 2>&1
+          LOCAL=$$(git rev-parse HEAD 2>/dev/null || echo "")
+          REMOTE=$$(git rev-parse @{u} 2>/dev/null || echo "")
+          
+          if [ -n "$$LOCAL" ] && [ -n "$$REMOTE" ] && [ "$$LOCAL" != "$$REMOTE" ]; then
+            echo "Configuration changes detected. Pulling..."
             git pull
+            NEEDS_UPDDATE=1
           fi
-          
-          # 2. Update Infrastructure
-          # -f: Use production file
-          # --quiet-pull: Don't spam logs downloading layers
-          # --pull always: Check GHCR for new Go binary versions
-          # --remove-orphans: Kill containers that were deleted from YAML (like Watchtower)
-          
-          docker compose -f docker-compose.production.yml up -d --quiet-pull --pull always --remove-orphans
-          
-          # Check again in 5 minutes
+
+          # grab the sha image ID before pull
+          OLD_ID=$$(docker inspect --format='{{.Id}}' $$TARGET_IMAGE 2>/dev/null || echo "none")
+          docker compose -f docker-compose.production.yml pull --quiet blog tunnel
+          NEW_ID=$$(docker inspect --format='{{.Id}}' $$TARGET_IMAGE 2>/dev/null || echo "none")
+
+          # compare the IDs
+          if [ "$$OLD_ID" != "$$NEW_ID" ]; then
+             echo "[$(date)] New image detected (SHA changed)."
+             NEEDS_UPDATE=1
+          fi
+
+          # apply changes only if needed
+          if [ "$$NEEDS_UPDATE" -eq 1 ]; then
+             echo "[$(date)] Applying updates..."
+             # --remove-orphans cleans up old containers if removed from YAML
+             docker compose -f docker-compose.production.yml up -d --remove-orphans blog tunnel
+             echo "[$(date)] Update complete."
+          else
+             echo "System up to date."
+          fi
+
           sleep 300
         done
+    
+    networks:
+      - blog_net
+
+networks:
+  blog_net:
+    name: blog_production_network
