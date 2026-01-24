@@ -110,12 +110,11 @@ func (g *GeoStats) Middleware(logger *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+			code := r.Header.Get("CF-IPCountry")
+			ip := getProxyClientIP(r)
+
 			go func() {
 				// extract CloudFlare country code
-				code := r.Header.Get("CF-IPCountry")
-
-				ip := getProxyClientIP(r)
-
 				g.Record(ip, code)
 				logger.Info("geo", "ip", ip, "code", code)
 			}()
