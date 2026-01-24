@@ -1,25 +1,20 @@
 services:
   blog:
-    # Use the image built by GitHub Actions
     image: ghcr.io/while-maybe/blogengine:latest
     container_name: blogengine
     restart: unless-stopped
     environment:
-      - APP_NAME=${APP_NAME}
+      - APP_NAME=${APP_NAME:-"give me a name :("}
       - APP_ENV=prod
-      - APP_SOURCES_DIR=${APP_SOURCES_DIR}
-
-      - HTTP_PORT=${HTTP_PORT}
-      - HTTP_READ_TIMEOUT=${HTTP_READ_TIMEOUT}
-      - HTTP_WRITE_TIMEOUT=${HTTP_WRITE_TIMEOUT}
-      - HTTP_IDLE_TIMEOUT=${HTTP_IDLE_TIMEOUT}
-      - HTTP_SHUTDOWN_DELAY=${HTTP_SHUTDOWN_DELAY}
-
-      - LIMITER_RPS=${LIMITER_RPS}
-      - LIMITER_BURST=${LIMITER_BURST}
-      
-      - PROXY_TRUSTED=${PROXY_TRUSTED}
-    # No ports exposed (using Tunnel)
+      - APP_SOURCES_DIR=${APP_SOURCES_DIR:-./sources}
+      - HTTP_PORT=${HTTP_PORT:-3000}
+      - HTTP_READ_TIMEOUT=${HTTP_READ_TIMEOUT:-5s}
+      - HTTP_WRITE_TIMEOUT=${HTTP_WRITE_TIMEOUT:-10s}
+      - HTTP_IDLE_TIMEOUT=${HTTP_IDLE_TIMEOUT:-10m}
+      - HTTP_SHUTDOWN_DELAY=${HTTP_SHUTDOWN_DELAY:-10s}
+      - LIMITER_RPS=${LIMITER_RPS:-20}
+      - LIMITER_BURST=${LIMITER_BURST:-50}
+      - PROXY_TRUSTED=${PROXY_TRUSTED:-true}
 
   tunnel:
     image: cloudflare/cloudflared:latest
@@ -44,32 +39,26 @@ services:
       - |
         apk add --no-cache git
         git config --global --add safe.directory /app
-        echo "Starting Unified Updater..."
         
-        # Initial cleanup - remove any orphaned containers with our names
-        echo "Cleaning up any conflicting containers..."
-        docker rm -f blogengine cloudflared 2>/dev/null || true
+        echo "GitOps Updater starting..."
         
         while true; do
           echo "[$(date)] Checking for updates..."
           
-          # Update Code/Config from Git
-          git fetch origin 2>/dev/null || echo "Git fetch failed, continuing..."
-          LOCAL=$(git rev-parse HEAD 2>/dev/null || echo "")
-          REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "")
+          # Pull configuration changes from Git
+          git fetch origin 2>&1
+          LOCAL=$$(git rev-parse HEAD 2>/dev/null || echo "")
+          REMOTE=$$(git rev-parse @{u} 2>/dev/null || echo "")
           
-          if [ -n "$LOCAL" ] && [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ]; then
-            echo "[$(date)] Git configuration change detected. Pulling..."
+          if [ -n "$$LOCAL" ] && [ -n "$$REMOTE" ] && [ "$$LOCAL" != "$$REMOTE" ]; then
+            echo "Configuration changes detected. Pulling..."
             git pull
           fi
           
-          # Clean up any conflicting containers before updating
-          docker rm -f blogengine cloudflared 2>/dev/null || true
-          
-          # Update Infrastructure
+          # Pull latest images and recreate containers
           docker compose -f docker-compose.production.yml pull --quiet 2>/dev/null || true
           docker compose -f docker-compose.production.yml up -d --force-recreate --no-deps blog tunnel
           
-          echo "[$(date)] Update check complete. Next check in 5 minutes."
+          echo "[$(date)] Update complete. Next check in 5 minutes."
           sleep 300
         done
