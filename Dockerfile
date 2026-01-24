@@ -29,11 +29,11 @@ COPY --from=builder /app/sources ./sources
 EXPOSE 3000
 
 # set env vars here and run
-ENV PORT=3000
-ENV BLOG_TITLE="Production Blog"
+ENV HTTP_PORT=3000
+ENV APP_NAME="BlogEngine Default"
+ENV APP_ENV="prod"
 
 ENTRYPOINT ["./blogengine"]
-
 
 # run with:
 # docker build -t blogengine:v1 .

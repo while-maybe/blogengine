@@ -10,8 +10,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"time"
 
+	"blogengine/internal/config"
 	"blogengine/internal/content"
 	"blogengine/internal/handlers"
 	"blogengine/internal/middleware"
@@ -21,27 +21,28 @@ type App struct {
 	Repo   *content.Repository
 	Server *http.Server
 	Logger *slog.Logger
+	Config *config.Config
 }
 
-func NewApp(ctx context.Context, blogTitle string, sourcesDir string, logger *slog.Logger) (*App, error) {
+func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, error) {
 
-	repo, err := content.NewRepository(blogTitle)
+	repo, err := content.NewRepository(cfg.App.Name)
 	if err != nil {
 		return nil, fmt.Errorf("could not create repository: %w", err)
 	}
 
 	wantedFiles := "*.md"
-	files, err := filepath.Glob(filepath.Join(sourcesDir, wantedFiles))
+	files, err := filepath.Glob(filepath.Join(cfg.App.SourcesDir, wantedFiles))
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan data sources: %w", err)
 	}
 	repo.LoadLazyMetaFromDisk(files)
 
-	limiter := middleware.NewIPRateLimiter(ctx, 10, 20, true)
+	limiter := middleware.NewIPRateLimiter(ctx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
 
 	geo := middleware.NewGeoStats(ctx)
 
-	h := handlers.NewBlogHandler(repo, blogTitle, logger, geo)
+	h := handlers.NewBlogHandler(repo, cfg.App.Name, logger, geo)
 
 	mux := http.NewServeMux()
 
@@ -63,17 +64,18 @@ func NewApp(ctx context.Context, blogTitle string, sourcesDir string, logger *sl
 	handleChain := middleware.Chain(mux, defaultMiddlewareStack...)
 
 	server := &http.Server{
-		Addr:         ":3000",
+		Addr:         fmt.Sprintf(":%d", cfg.HTTP.Port),
 		Handler:      handleChain,
-		ReadTimeout:  5 * time.Second,
-		IdleTimeout:  30 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  cfg.HTTP.Timeouts.Read,
+		WriteTimeout: cfg.HTTP.Timeouts.Write,
+		IdleTimeout:  cfg.HTTP.Timeouts.Idle,
 	}
 
 	return &App{
 		Repo:   repo,
 		Server: server,
 		Logger: logger,
+		Config: cfg,
 	}, nil
 }
 
@@ -96,8 +98,7 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	// attempt clean shutdown
-	srvCleanupDuration := 10 * time.Second
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), srvCleanupDuration)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), a.Config.HTTP.Timeouts.Shutdown)
 	defer cancel()
 
 	a.Logger.Info("draining connections...")
@@ -114,12 +115,15 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func main() {
-
 	stderr := os.Stderr
-	const blogTitle = "Strange coding blog"
 
-	logHandler := slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
-	logger := slog.New(logHandler).With("app", blogTitle)
+	cfg := config.LoadWithDefaults()
+	if err := cfg.Validate(); err != nil {
+		panic(fmt.Sprintf("invalid configuration: %v", err))
+	}
+
+	logHandler := slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: cfg.Logger.Level})
+	logger := slog.New(logHandler).With("app", cfg.App.Name)
 
 	// Add PID to this log line
 	logger.Info("application starting", "pid", os.Getpid())
@@ -128,7 +132,7 @@ func main() {
 	defer stop()
 
 	// initialise
-	app, err := NewApp(rootCtx, blogTitle, "./sources", logger)
+	app, err := NewApp(rootCtx, cfg, logger)
 	if err != nil {
 		logger.Error("server initialise", "err", err)
 		os.Exit(1)
