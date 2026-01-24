@@ -4,8 +4,6 @@ services:
     image: ghcr.io/while-maybe/blogengine:latest
     container_name: blogengine
     restart: unless-stopped
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - APP_NAME=${APP_NAME}
       - APP_ENV=prod
@@ -33,14 +31,39 @@ services:
     depends_on:
       - blog
 
-  watchtower:
-    image: containrrr/watchtower
-    container_name: watchtower
+  updater:
+    image: docker:cli
+    container_name: gitops_updater
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      # force newer API for Debian Trixie
-      - DOCKER_API_VERSION=1.52
-    # check every 5 mins
-    command: --interval 300 --cleanup --label-enable
+      - .:/app
+    working_dir: /app
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache git
+        echo "Starting Unified Updater..."
+        
+        while true; do
+          # 1. Update Code/Config from Git
+          git fetch origin
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE=$(git rev-parse @{u})
+          
+          if [ "$LOCAL" != "$REMOTE" ]; then
+            echo "Git configuration change detected. Pulling..."
+            git pull
+          fi
+          
+          # 2. Update Infrastructure
+          # -f: Use production file
+          # --quiet-pull: Don't spam logs downloading layers
+          # --pull always: Check GHCR for new Go binary versions
+          # --remove-orphans: Kill containers that were deleted from YAML (like Watchtower)
+          
+          docker compose -f docker-compose.production.yml up -d --quiet-pull --pull always --remove-orphans
+          
+          # Check again in 5 minutes
+          sleep 300
+        done
