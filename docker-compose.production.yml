@@ -55,9 +55,12 @@ services:
             git pull
           fi
           
-          # Pull latest images and recreate containers
-          docker compose -f docker-compose.production.yml pull --quiet 2>/dev/null || true
-          docker compose -f docker-compose.production.yml up -d --force-recreate --no-deps blog tunnel
+          # Pull latest images (this checks GHCR for new versions)
+          echo "Checking for new images..."
+          docker compose -f docker-compose.production.yml pull --quiet blog tunnel
+          
+          # Only recreate if images actually changed - skip recreation if nothing changed
+          docker compose -f docker-compose.production.yml up -d blog tunnel
           
           echo "[$(date)] Update complete. Next check in 5 minutes."
           sleep 300
