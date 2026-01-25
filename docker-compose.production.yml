@@ -58,7 +58,7 @@ services:
           if [ -n "$$LOCAL" ] && [ -n "$$REMOTE" ] && [ "$$LOCAL" != "$$REMOTE" ]; then
             echo "Configuration changes detected. Pulling..."
             git pull
-            NEEDS_UPDDATE=1
+            NEEDS_UPDATE=1
           fi
 
           # grab the sha image ID before pull
