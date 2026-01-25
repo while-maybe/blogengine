@@ -130,14 +130,17 @@ func (i *IPRateLimiter) Middleware(logger *slog.Logger) Middleware {
 				retrySeconds := int(delay.Seconds())
 				retrySeconds = max(1, retrySeconds)
 
-				w.Header().Set("X-RateLimit-Limit", strconv.Itoa(i.burst))
 				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds))
+				w.Header().Set("X-RateLimit-Limit", strconv.Itoa(i.burst))
 				w.Header().Set("X-RateLimit-Remaining", "0")
 
 				http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 				return
 			}
 
+			tokens := int(limiter.Tokens()) // Current available tokens
+			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(i.burst))
+			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(tokens))
 			next.ServeHTTP(w, r)
 		})
 	}
