@@ -47,8 +47,10 @@ func getDirectClientIPValidated(r *http.Request) string {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		// r.RemoteAddr does not have a port, return as is
-		return r.RemoteAddr
+		ip = r.RemoteAddr
 	}
+
+	ip = strings.TrimSpace(ip)
 
 	if net.ParseIP(ip) == nil {
 		return "" // Invalid IP - let middleware handle this
