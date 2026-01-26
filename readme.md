@@ -6,8 +6,8 @@ At this stage the focus of the project is the backend (not the web design).
 
 **Status:** 🚧 Active Development 🚧
 
-🟢 [Live Demo BLOG](<https://blog.fullmetal.party>)
-(Running on a Raspberry Pi 4 via Cloudflare Tunnel)
+🟢 **[Live Demo BLOG](<https://blog.fullmetal.party>)**
+(Running on self-hosted amd64 via Cloudflare Tunnel)
 
 ## Key Features (Implemented)
 
@@ -42,7 +42,7 @@ This project demonstrates Clean Architecture and Systems Programming patterns in
 │   ├── components/       # Templ (HTML) view components
 │   ├── content/          # Data access layer (Disk IO, Caching)
 │   ├── handlers/         # HTTP Transport layer
-│   └── middleware/       # Rate limiting, Logging, Recovery
+│   └── middleware/       # Rate limiting, Logging, Recovery, Geostats
 ├── docker-compose.yml    # Local development stack
 └── Makefile              # Build automation
 ```
@@ -70,6 +70,48 @@ docker compose build
 # run it
 docker compose up
 ```
+
+## Configuration
+
+The application is configured via environment variables (or a `.env` file - an `example.env` file is provided to facilitate copying the option), otherwise defaults will be used.
+
+### Application Settings
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `APP_NAME` | Name displayed in header/title | `Strange Coding Blog` |
+| `APP_ENV` | Environment mode (`dev` or `prod`) | `prod` |
+| `APP_SOURCES_DIR` | Path to markdown files | `./sources` |
+
+### Networking & Security
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `HTTP_PORT` | Port to listen on | `3000` |
+| `PROXY_TRUSTED` | Trust X-Forwarded-For headers? | `true` |
+| `LIMITER_RPS` | Rate Limit (Requests Per Sec) | `20` |
+| `LIMITER_BURST` | Rate Limit Burst bucket | `50` |
+
+### Timeouts
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `HTTP_READ_TIMEOUT` | Max time to read request body | `5s` |
+| `HTTP_WRITE_TIMEOUT` | Max time to write response | `10s` |
+| `HTTP_IDLE_TIMEOUT` | Keep-alive timeout | `30s` |
+| `HTTP_SHUTDOWN_DELAY` | Graceful shutdown delay | `10s` |
+
+### Logging
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `LOGGER_LEVEL` | Logging level (`debug`\|`info`\|`warning`\|`error`) | `info` |
+
+### Secrets
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `TUNNEL_TOKEN` | Cloudflare tunnel token | `none` |
 
 ## Roadmap (not in order and will likely be different tomorrow)
 
