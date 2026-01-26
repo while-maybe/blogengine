@@ -1,5 +1,5 @@
 services:
-  blog:
+  blogengine:
     build:
       context: .
       dockerfile: Dockerfile

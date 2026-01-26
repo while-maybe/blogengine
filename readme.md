@@ -75,6 +75,12 @@ docker compose up
 
 The application is configured via environment variables (or a `.env` file - an `example.env` file is provided to facilitate copying the option), otherwise defaults will be used.
 
+### Docker Settings
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `COMPOSE_PROJECT_NAME` | Enforces the Docker stack name (Required for GitOps) | `blogengine` |
+
 ### Application Settings
 
 | Variable | Description | Default |

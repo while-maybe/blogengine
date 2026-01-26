@@ -1,5 +1,5 @@
 services:
-  blog:
+  blogengine:
     image: ghcr.io/while-maybe/blogengine:latest
     container_name: blogengine
     restart: unless-stopped
@@ -12,7 +12,8 @@ services:
       - LIMITER_BURST=${LIMITER_BURST:-50}
       - PROXY_TRUSTED=${PROXY_TRUSTED:-true}
     networks:
-      - blog_net
+      - blogengine_network
+
 
   tunnel:
     image: cloudflare/cloudflared:latest
@@ -22,9 +23,10 @@ services:
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     depends_on:
-      - blog
+      - blogengine
     networks:
-      - blog_net
+      - blogengine_network
+
 
   updater:
     image: docker:cli
@@ -35,26 +37,21 @@ services:
       - .:/app
     working_dir: /app
     environment:
-      # will be set in the shell from the current directory
-      - COMPOSE_PROJECT_NAME=
+      - APP_NAME=${APP_NAME:-"give me a name :("}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         apk add --no-cache git
         git config --global --add safe.directory /app
 
-        # derive project name from current directory
-        PROJECT_NAME=$$(basename "$$(pwd)")
-        export COMPOSE_PROJECT_NAME="$$PROJECT_NAME"
-        echo "COMPOSE_PROJECT_NAME set to $$PROJECT_NAME"
-
         TARGET_IMAGE="ghcr.io/while-maybe/blogengine:latest"
         
-        echo "GitOps Updater starting in project $$PROJECT_NAME..."
+        echo "GitOps Updater starting for: $$APP_NAME"
 
         while true; do
           NEEDS_UPDATE=0
-          echo "[$$(date)] Checking for updates..."
           
           # check git (config)
           git fetch origin 2>&1
@@ -67,10 +64,12 @@ services:
             NEEDS_UPDATE=1
           fi
 
+
           # grab the sha image ID before pull
           OLD_ID=$$(docker inspect --format='{{.Id}}' $$TARGET_IMAGE 2>/dev/null || echo "none")
-          docker compose -f docker-compose.production.yml pull --quiet blog tunnel
+          docker compose -f docker-compose.production.yml pull --quiet blogengine tunnel
           NEW_ID=$$(docker inspect --format='{{.Id}}' $$TARGET_IMAGE 2>/dev/null || echo "none")
+
 
           # compare the IDs
           if [ "$$OLD_ID" != "$$NEW_ID" ]; then
@@ -78,24 +77,27 @@ services:
              NEEDS_UPDATE=1
           fi
 
+
           # apply changes only if needed
           if [ "$$NEEDS_UPDATE" -eq 1 ]; then
              
-             echo "[$$(date)] Applying updates for project $$PROJECT_NAME..."
-             
-             # --remove-orphans cleans up old containers if removed from YAML
-             docker compose -f docker-compose.production.yml up -d --remove-orphans blog tunnel
+             echo "[$$(date)] Applying updates for $$APP_NAME..."
+
+             docker compose -f docker-compose.production.yml up -d --remove-orphans blogengine tunnel
+
              echo "[$$(date)] Update complete."
           else
              echo "System up to date."
           fi
 
+
           sleep 300
         done
     
     networks:
-      - blog_net
+      - blogengine_network
+
 
 networks:
-  blog_net:
-    name: blog_production_network
+  blogengine_network:
+    name: blogengine_network
