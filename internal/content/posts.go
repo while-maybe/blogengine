@@ -7,15 +7,18 @@ import (
 )
 
 type Post struct {
-	ID         uint32
-	Author     int
-	Title      string
-	CreatedAt  time.Time
-	ModifiedAt time.Time
-	Path       string
-	IsSafeHTML bool
-	Content    []byte
-	mu         sync.RWMutex
+	ID          uint32
+	Title       string
+	Author      string
+	Description string // for SEO
+	CreatedAt   time.Time
+	ModifiedAt  time.Time
+	Draft       bool
+	Path        string
+	IsSafeHTML  bool
+	NoIndex     bool
+	Content     []byte
+	mu          sync.RWMutex
 }
 
 type Repository struct {
