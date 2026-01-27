@@ -10,26 +10,28 @@ import (
 )
 
 type GeoStats struct {
-	mu        sync.RWMutex
-	visitors  map[string]time.Time
-	countries map[string]int
+	mu               sync.RWMutex
+	visitors         map[string]time.Time
+	countries        map[string]int
+	validity         time.Duration
+	cleanupFrequency time.Duration
 }
 
 func NewGeoStats(ctx context.Context) *GeoStats {
+
 	g := &GeoStats{
-		visitors:  make(map[string]time.Time),
-		countries: make(map[string]int),
+		visitors:         make(map[string]time.Time),
+		countries:        make(map[string]int),
+		validity:         24 * time.Hour,
+		cleanupFrequency: 15 * time.Minute,
 	}
 
 	go g.backgroundCleanup(ctx)
 	return g
 }
 
-const validity = 24 * time.Hour
-const cleanupFrequency = 15 * time.Minute
-
 func (g *GeoStats) backgroundCleanup(ctx context.Context) {
-	ticker := time.NewTicker(cleanupFrequency)
+	ticker := time.NewTicker(g.cleanupFrequency)
 	defer ticker.Stop()
 
 	for {
@@ -43,7 +45,7 @@ func (g *GeoStats) backgroundCleanup(ctx context.Context) {
 }
 
 func (g *GeoStats) cleanup() {
-	cutOff := time.Now().UTC().Add(-validity)
+	cutOff := time.Now().UTC().Add(-g.validity)
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -56,6 +58,10 @@ func (g *GeoStats) cleanup() {
 }
 
 func (g *GeoStats) Record(ip, countryCode string) {
+	if ip == "" {
+		return
+	}
+
 	if countryCode == "" {
 		countryCode = "XX"
 	}
@@ -64,7 +70,7 @@ func (g *GeoStats) Record(ip, countryCode string) {
 	defer g.mu.Unlock()
 
 	// if does not exist
-	if _, ok := g.visitors[ip]; !ok {
+	if lastSeen, ok := g.visitors[ip]; !ok || time.Since(lastSeen) > g.validity {
 		g.countries[countryCode]++
 	}
 
@@ -79,12 +85,17 @@ type CountryStat struct {
 
 func (g *GeoStats) GetTopCountries(n int) []*CountryStat {
 	if n < 1 {
-		return nil
+		return []*CountryStat{}
 	}
 
 	topN := make([]*CountryStat, 0, n)
 
 	g.mu.RLock()
+	if len(g.countries) == 0 {
+		g.mu.RUnlock()
+		return []*CountryStat{}
+	}
+
 	for code, count := range g.countries {
 		topN = append(topN, &CountryStat{Code: code, Count: count})
 	}
