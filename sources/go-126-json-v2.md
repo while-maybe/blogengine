@@ -1,4 +1,11 @@
-# Go 1.26: The Arrival of JSON v2
+---
+title: "Go 1.26: The Arrival of JSON v2"
+description: "Why the new JSON v2 library looks exciting"
+author: ""
+modified_at: "2026-01-20"
+draft: false
+noindex: true
+---
 
 For over a decade, `encoding/json` has been the workhorse of Go services. But let's be honest: it was slow, memory-hungry, and `omitempty` was a foot-gun.
 

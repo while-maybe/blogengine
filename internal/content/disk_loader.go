@@ -2,18 +2,30 @@ package content
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"hash/crc32"
 	"io"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/adrg/frontmatter"
 )
 
 const maxBufferSize = 32 * 1024
 const maxFileSize = 10 * 1024 * 1024
+
+type metaData struct {
+	Title       string `yaml:"title"`
+	Description string `yaml:"description"` // for SEO
+	Author      string `yaml:"author"`
+	CreatedAt   string `yaml:"created_at"`
+	ModifiedAt  string `yaml:"modified_at"`
+	Draft       bool   `yaml:"draft"`
+	NoIndex     bool   `yaml:"noindex"`
+}
 
 func (p *Repository) LoadLazyMetaFromDisk(paths []string) error {
 	if len(paths) == 0 {
@@ -30,67 +42,66 @@ func (p *Repository) LoadLazyMetaFromDisk(paths []string) error {
 			}
 			defer file.Close()
 
-			scanner := bufio.NewScanner(file)
+			var meta metaData
 
-			var title string
-			for scanner.Scan() {
-				line := scanner.Text()
+			_, err = frontmatter.Parse(file, &meta)
 
-				// Skip YAML separator
-				if strings.HasPrefix(line, "---") {
-					continue
-				}
+			// fallback for files without frontmatter
+			if err != nil || meta.Title == "" {
+				file.Seek(0, 0)
+				meta.Title = fallbackTitleScan(file)
+			}
 
-				var found bool
-				if title, found = extractTitle(line); found {
-					break
+			postDate := time.Now().UTC()
+			if stats, err := file.Stat(); err != nil {
+				fmt.Printf("%v: %s, keeping current time\n", ErrFileStats, cleanPath)
+			} else {
+				postDate = stats.ModTime().UTC()
+			}
+
+			if meta.ModifiedAt != "" {
+				if parsed, err := time.Parse("2006-01-02", meta.ModifiedAt); err == nil {
+					postDate = parsed
 				}
 			}
 
 			id := crc32.ChecksumIEEE([]byte(cleanPath))
 
-			modified := time.Now().UTC()
-
-			stats, err := file.Stat()
-			if err != nil {
-				fmt.Printf("%v: %s, defaulting to current time\n", ErrFileStats, cleanPath)
-			} else {
-				modified = stats.ModTime().UTC()
-			}
-
-			// TODO - investigate collecting size to prevent huge files to reside in the cache
-
 			newPost := &Post{
-				ID:         id,
-				Author:     rand.IntN(1_000),
-				Title:      title,
-				CreatedAt:  time.Time{},
-				ModifiedAt: modified,
-				Path:       cleanPath,
-				IsSafeHTML: false,
+				ID:          id,
+				Title:       meta.Title,
+				Description: meta.Description,
+				Author:      meta.Author,
+				CreatedAt:   time.Time{},
+				ModifiedAt:  postDate,
+				Path:        cleanPath,
+				IsSafeHTML:  false,
 			}
 
 			p.mu.Lock()
 			p.Data[newPost.ID] = newPost
 			p.mu.Unlock()
-			// contents[newPost.id] = mdToHTML(fileName, io.ReadAll())
-			fmt.Printf(" -> Found: %q\n", cleanPath)
+
+			fmt.Printf(" -> Found: %q [%s]\n", cleanPath, meta.Title)
 		}()
 	}
 	return nil
 }
 
-// extractTitle is a helper to grab title from "# Title" or "Title: ..."
-func extractTitle(line string) (string, bool) {
-	line = strings.TrimSpace(line)
-	if len(line) == 0 {
-		return "", false
+func fallbackTitleScan(r io.Reader) string {
+	scanner := bufio.NewScanner(r)
+	// if title is not within first 20 lines, it's likely not there at all
+	linesScanned := 0
+	for scanner.Scan() {
+		linesScanned++
+		if linesScanned > 20 {
+			break
+		}
+		if _, title, found := strings.Cut(scanner.Text(), "# "); found {
+			return strings.TrimSpace(title)
+		}
 	}
-
-	if _, title, found := strings.Cut(line, "# "); found {
-		return strings.TrimSpace(title), true
-	}
-	return strings.TrimSpace(line), false
+	return "Untitled Post"
 }
 
 // GetContent returns the cached content or loads it from disk if missing.
@@ -130,19 +141,28 @@ func (p *Post) GetContent() ([]byte, error) {
 	if stats.Size() > maxFileSize { // 10MB limit
 		return nil, fmt.Errorf("%w: %d bytes", ErrFileTooLarge, stats.Size())
 	}
-	// use file size as buffer when smaller than max to reduce memory footprint
+	// use file size as buffer size when smaller than max to reduce memory footprint
 	postBufferSize := min(maxBufferSize, int(stats.Size()))
 
 	// normally conversion int64 -> int would be dangerous but blog post markdown files < maxFileSize...
 	bufReader := bufio.NewReaderSize(file, postBufferSize)
 
+	// read the entire content from the buffer
 	postBytes, err := io.ReadAll(bufReader)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", ErrBufferError, p.Path, err)
 	}
 
+	// separate frontmatter data from body
+	var meta metaData
+	markdownBody, err := frontmatter.Parse(bytes.NewReader(postBytes), &meta)
+	if err != nil {
+		// no yaml detected  or parsing failed, proceed with original raw bytes
+		markdownBody = postBytes
+	}
+
 	// into cache
-	if p.Content, err = mdToHTML(postBytes); err != nil {
+	if p.Content, err = mdToHTML(markdownBody); err != nil {
 		return []byte{}, fmt.Errorf("%w: %v", ErrContentUnavailable, err)
 	}
 	return p.Content, nil
