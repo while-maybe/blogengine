@@ -46,7 +46,7 @@ func getProxyClientIP(r *http.Request) string {
 func getDirectClientIPValidated(r *http.Request) string {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		// r.RemoteAddr does not have a port, return as is
+		// r.RemoteAddr does not have a port, continue as is
 		ip = r.RemoteAddr
 	}
 
