@@ -51,6 +51,8 @@ test/coverage:
 build:
 	@echo 'Generating templates...'
 	@templ generate
+	@echo 'Building Tailwind...'
+	@make tailwind/build
 	@echo 'Building $(BINARY_NAME)...'
 	@go build -ldflags="-s -w" -o=./bin/$(BINARY_NAME) $(MAIN_PACKAGE)
 
@@ -59,6 +61,8 @@ build:
 build/all:
 	@echo 'Generating templates...'
 	@templ generate
+	@echo 'Building Tailwind...'
+	@make tailwind/build
 	@echo 'Building for Linux/AMD64...'
 	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o=./bin/linux_amd64/$(BINARY_NAME) $(MAIN_PACKAGE)
 	@echo 'Building for Linux/ARM64...'
