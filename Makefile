@@ -48,17 +48,13 @@ test/coverage:
 # building
 
 .PHONY: build
-build:
-	@echo 'Generating templates...'
-	@templ generate
+build: generate
 	@echo 'Building $(BINARY_NAME)...'
 	@go build -ldflags="-s -w" -o=./bin/$(BINARY_NAME) $(MAIN_PACKAGE)
 
 # amd64 & arm64
 .PHONY: build/all
-build/all:
-	@echo 'Generating templates...'
-	@templ generate
+build/all: generate
 	@echo 'Building for Linux/AMD64...'
 	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o=./bin/linux_amd64/$(BINARY_NAME) $(MAIN_PACKAGE)
 	@echo 'Building for Linux/ARM64...'
@@ -66,9 +62,7 @@ build/all:
 
 # if optional args are needed -> make run ARGS="-port=4000"
 .PHONY: run
-run:
-	@templ generate
-	@make tailwind/build
+run: generate
 	@go run $(MAIN_PACKAGE) $(ARGS)
 
 .PHONY: clean
@@ -107,11 +101,11 @@ tailwind/install:
 		LATEST=$$(curl -s https://api.github.com/repos/tailwindlabs/tailwindcss/releases | grep -o '"tag_name": "v$(TAILWIND_MAJOR_VERSION)\.[^"]*"' | head -1 | cut -d'"' -f4); \
 		echo "Detected version: $$LATEST"; \
 		curl -sL "https://github.com/tailwindlabs/tailwindcss/releases/download/$$LATEST/tailwindcss-$(OS)-$(ARCH)" -o $(TAILWIND_BIN); \
-		chmod +x $(TAILWIND_BIN); \
 		echo "Tailwind installed."; \
 	else \
 		echo "Tailwind binary already exists."; \
 	fi
+	@chmod +x $(TAILWIND_BIN)
 
 # Build CSS: depend on 'tailwind/install' to ensure binary exists
 .PHONY: tailwind/build

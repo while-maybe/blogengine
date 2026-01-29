@@ -1,8 +1,9 @@
 # build stage (unchanged)
-FROM golang:1.25-alpine AS builder
+FROM golang:1.25 AS builder
 
 # build deps
-RUN apk add --no-cache make git
+RUN apt update && apt install -y make git curl
+
 # templ
 RUN go install github.com/a-h/templ/cmd/templ@latest
 
@@ -15,10 +16,13 @@ RUN go mod download
 COPY . .
 
 RUN make tailwind/install
+RUN make tailwind/build
 
+# Create a static binary
+ENV CGO_ENABLED=0
 RUN make build
 
-# run stage
+# run stage - ON ALPINE!
 FROM alpine:latest
 
 # Add non-root user: # -S = system user, -G = add to group
