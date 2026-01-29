@@ -54,9 +54,10 @@ func (h *BlogHandler) HandleIndex() http.Handler {
 func (h *BlogHandler) HandlePost() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		idStr := strings.TrimPrefix(r.URL.Path, "/post/")
-		id64, err := strconv.ParseInt(idStr, 10, 32)
+		id64, err := strconv.ParseUint(idStr, 10, 32)
 		if err != nil {
 			http.NotFound(w, r)
+			slog.Error("parsing file id", "idStr", idStr, "err", err)
 			return
 		}
 
