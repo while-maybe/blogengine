@@ -1,3 +1,12 @@
+---
+title: "Mastering Iterators in Go 1.26"
+description: "All about custom iterators"
+author: "Unknown"
+modified_at: "2026-01-10"
+draft: false
+noindex: true
+---
+
 # Mastering Iterators in Go 1.26
 
 Go 1.23 introduced the `iter` package, but Go 1.26 finally makes it ergonomic with the standard library adopting pull-iterators across `slices` and `maps`.

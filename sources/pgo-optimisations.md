@@ -1,4 +1,13 @@
-# Profile-Guided Optimization (PGO) is now Default
+---
+title: "Profile-Guided Optimisation (PGO) is now Default"
+description: "How to collect a CPU profile and build with flags"
+author: "Unknown"
+modified_at: "2026-01-10"
+draft: false
+noindex: true
+---
+
+# Profile-Guided Optimisation (PGO) is now Default
 
 Startups often ignore PGO because it sounds complex. "I need to collect a CPU profile, commit it to git, and build with flags?"
 
