@@ -111,11 +111,11 @@ tailwind/install:
 		LATEST=$$(curl -s https://api.github.com/repos/tailwindlabs/tailwindcss/releases | grep -o '"tag_name": "v$(TAILWIND_MAJOR_VERSION)\.[^"]*"' | head -1 | cut -d'"' -f4); \
 		echo "Detected version: $$LATEST"; \
 		curl -sL "https://github.com/tailwindlabs/tailwindcss/releases/download/$$LATEST/tailwindcss-$(OS)-$(ARCH)" -o $(TAILWIND_BIN); \
-		chmod +x $(TAILWIND_BIN); \
 		echo "Tailwind installed."; \
 	else \
 		echo "Tailwind binary already exists."; \
 	fi
+	chmod +x $(TAILWIND_BIN)
 
 # Build CSS: depend on 'tailwind/install' to ensure binary exists
 .PHONY: tailwind/build
