@@ -2,7 +2,8 @@
 FROM golang:1.25-alpine AS builder
 
 # build deps
-RUN apk add --no-cache make git
+RUN apk add --no-cache make git curl
+
 # templ
 RUN go install github.com/a-h/templ/cmd/templ@latest
 
