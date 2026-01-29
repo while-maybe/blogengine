@@ -223,3 +223,6 @@ components/*_templ.go
 
 # Go dependency directories
 vendor/
+
+# dynamincally tailwind generated style.css
+static/style.css
