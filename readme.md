@@ -89,6 +89,12 @@ The application is configured via environment variables (or a `.env` file - an `
 | `APP_ENV` | Environment mode (`dev` or `prod`) | `prod` |
 | `APP_SOURCES_DIR` | Path to markdown files | `./sources` |
 
+### 🎨 Frontend Architecture
+
+* **Zero-Dependency Tailwind:** Uses the **Tailwind v4 Standalone CLI** to generate styles without requiring Node.js, NPM, or complex JavaScript build tools.
+* **Build-Time Optimisation:** CSS is scanned from Templ components, compiled, and **minified** during the Docker build stage, ensuring the smallest possible payload.
+* **Server-Side Component Styling:** Utility classes are applied directly within **Templ** files, keeping styles co-located with HTML logic.
+
 ### Networking & Security
 
 | Variable | Description | Default |
