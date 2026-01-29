@@ -5,7 +5,9 @@ import "time"
 templ footerTemplate(title string) {
     {{year := time.Now().Year()}}
 
-    <footer>
-        {title} - Copyright {year}
+    <footer class="footer-banner">
+        <div class="footer-content">
+            {title} - Copyright {year}
+        </div>
     </footer>
 }

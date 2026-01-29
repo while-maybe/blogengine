@@ -41,20 +41,7 @@ func BlogPost(title string, content templ.Component) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/components/blog_post.templ`, Line: 5, Col: 15}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</h1><div class=\"layout-container\"><aside class=\"sidebar\"><div class=\"toc-title\">On this page</div><ul id=\"toc-list\"></ul></aside><main class=\"markdown-body\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"layout-container\"><main class=\"markdown-body\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -62,7 +49,7 @@ func BlogPost(title string, content templ.Component) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</main></div><script>\n        // --- 1. Smart Scroll Banner ---\n        let lastScrollY = window.scrollY;\n        const header = document.getElementById(\"main-header\");\n        window.addEventListener(\"scroll\", () => {\n            if (window.scrollY > lastScrollY && window.scrollY > 100) {\n                header.classList.add(\"hidden\");\n            } else {\n                header.classList.remove(\"hidden\");\n            }\n            lastScrollY = window.scrollY;\n        });\n\n        // --- 2. Auto-Generate Table of Contents ---\n        document.addEventListener(\"DOMContentLoaded\", function() {\n            const tocList = document.getElementById(\"toc-list\");\n            const headers = document.querySelectorAll(\".markdown-body h2, .markdown-body h3\");\n            if (headers.length === 0) document.querySelector(\".sidebar\").style.display = \"none\";\n\n            headers.forEach(header => {\n                if (!header.id) header.id = header.innerText.toLowerCase().replace(/\\s+/g, '-');\n                const li = document.createElement(\"li\");\n                const a = document.createElement(\"a\");\n                a.href = \"#\" + header.id;\n                a.innerText = header.innerText;\n                if (header.tagName === \"H3\") {\n                    a.style.paddingLeft = \"15px\";\n                    a.style.fontSize = \"0.9em\";\n                }\n                li.appendChild(a);\n                tocList.appendChild(li);\n            });\n\n        // --- 3. Add Copy Buttons to Code Blocks ---\n        document.querySelectorAll('pre').forEach(pre => {\n            const btn = document.createElement('button');\n            btn.className = 'copy-btn';\n            btn.title = 'Copy to clipboard';\n            \n            // SVG Icon (Clipboard)\n            btn.innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z\"/></svg>';\n            \n            btn.addEventListener('click', () => {\n                const code = pre.querySelector('code');\n                if (!code) return;\n                \n                navigator.clipboard.writeText(code.innerText).then(() => {\n                    // Feedback animation\n                    const originalHTML = btn.innerHTML;\n                    // Checkmark icon\n                    btn.innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z\"/></svg>';\n                    setTimeout(() => {\n                        btn.innerHTML = originalHTML;\n                    }, 2000);\n                });\n            });\n\n            pre.appendChild(btn);\n        });\n    });\n    </script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</main></div><script>\n        // smart scroll banner\n        let lastScrollY = window.scrollY;\n        const header = document.getElementById(\"main-header\");\n        window.addEventListener(\"scroll\", () => {\n            if (window.scrollY > lastScrollY && window.scrollY > 100) {\n                header.classList.add(\"hidden\");\n            } else {\n                header.classList.remove(\"hidden\");\n            }\n            lastScrollY = window.scrollY;\n        });\n\n        // copy button on code block\n        document.querySelectorAll('pre').forEach(pre => {\n            const btn = document.createElement('button');\n            btn.className = 'copy-btn';\n            btn.title = 'Copy to clipboard';\n            \n            // SVG Icon (Clipboard)\n            btn.innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z\"/></svg>';\n            \n            btn.addEventListener('click', () => {\n                const code = pre.querySelector('code');\n                if (!code) return;\n                \n                navigator.clipboard.writeText(code.innerText).then(() => {\n                    // Feedback animation\n                    const originalHTML = btn.innerHTML;\n                    // Checkmark icon\n                    btn.innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z\"/></svg>';\n                    setTimeout(() => {\n                        btn.innerHTML = originalHTML;\n                    }, 2000);\n                });\n            });\n\n            pre.prepend(btn);\n        });\n    \n    </script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

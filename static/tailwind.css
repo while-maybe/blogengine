@@ -1,0 +1,234 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,600;0,900;1,400&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-brand-dark: #0f172a;       /* Slate 900 - Main BG */
+  --color-brand-card: #1e293b;       /* Slate 800 - Card/Header BG */
+  --color-brand-edge: #334155;       /* Slate 700 - Borders */
+  --color-brand-code: #1f2428;       /* was --code-bg */
+
+  /* Text */
+  --color-text-main: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  
+  /* Accent */
+  --color-accent: #38bdf8;
+
+  /* Fonts */
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  
+  /* Layout */
+  --spacing-header: 120px;
+  --width-page: 1200px;
+}
+
+
+/* 4. Base Styles (Global defaults) */
+@layer base {
+  body {
+    /* Apply theme variables using Tailwind utility classes */
+    @apply bg-brand-dark text-text-main font-sans antialiased;
+    
+    /* Sticky footer setup */
+    @apply flex flex-col items-center justify-between min-h-dvh gap-y-2;
+    
+  }
+
+  /* Optional: Global reset for headers to use the serif font */
+  h1 {
+    @apply font-serif text-white text-4xl my-3;
+    @apply md:text-6xl md:my-5;
+  }
+
+  h2 {
+    @apply font-serif text-white text-3xl mt-5 mb-2;
+    @apply md:text-5xl md:mt-7 md:mb-3;
+  }
+
+  h3, h4, h5, h6 {
+    @apply font-serif text-white text-2xl mt-5 mb-2;
+    @apply md:text-4xl md:mt-7 md:mb-3;
+  }
+
+  p {
+    @apply mb-2;
+  }
+}
+
+@layer components {
+  .top-banner {
+    @apply sticky top-0 z-50;
+    @apply w-full h-header flex flex-col justify-center items-center;
+    background-image: 
+      linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 0.9)), 
+      url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
+    
+    background-size: cover;
+    background-position: center;
+    /* @apply border border-amber-300; */
+  }
+  
+  .banner-content { 
+    @apply lg:w-3/4 h-auto text-center flex flex-col justify-center;
+    /* @apply border-2 border-accent; */
+  }
+  
+  .main-content {
+    @apply w-full lg:w-3/4 grow p-3;
+    /* @apply border border-amber-300; */
+  }
+  
+  .footer-banner {
+    @apply w-full h-12 flex flex-col justify-center items-center;
+    background-image:linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 0.9));
+    /* @apply border border-amber-300; */
+  }
+  
+  .footer-content { 
+    @apply font-serif text-lg;
+    @apply lg:w-3/4 h-100 text-center flex flex-col justify-center;
+  }
+}
+
+
+
+/* blog page */
+@layer components {
+  .layout-container {
+    @apply w-full;
+    @apply lg:w-3/4 p-2;
+    /* @apply border border-amber-300; */
+  }
+  
+  .markdown-body pre {
+    @apply p-3 my-6 overflow-x-auto;
+    @apply md:w-auto ;
+    @apply rounded-lg border border-brand-edge;
+    @apply bg-brand-code shadow-lg;
+    position: static;
+  }
+
+  .markdown-body pre code {
+    @apply block bg-transparent p-1;
+    @apply text-gray-200 font-mono text-lg leading-snug;
+    @apply border-none
+  }
+  
+  code {
+    @apply font-mono  rounded-md;
+    @apply border-l border-accent;
+    @apply ml-0.5 px-1.5 py-1 bg-gray-800 text-text-muted;
+  }
+
+  .brand{
+    @apply my-3;
+  }
+  
+  .list-item-title {
+    @apply mb-3;
+  }
+
+  .post-list {
+    @apply flex flex-col gap-7;
+  }
+
+  .post-list-card {
+    @apply grid grid-cols-[80px_1fr] grid-rows-[auto_auto_auto] content-between;
+    @apply pt-2 h-[90px] lg:h-[140px];
+    /* @apply border rounded-2xl border-accent; */
+
+    @apply lg:p-3 lg:gap-x-3;
+
+    /* backgroun and shadow */
+    @apply bg-[#161b22];
+    @apply shadow-lg shadow-black/50;
+    @apply transition-transform hover:-translate-y-1;
+
+    grid-template-areas: 
+      "image title"
+      "image description"
+      "author meta";
+    }
+    
+    .post-list-card-image {
+      grid-area: image;
+      @apply w-12 h-12 lg:w-[70px] lg:h-[70px];
+      @apply justify-self-center self-center;
+      @apply text-center text-5xl lg:text-6xl font-bold text-red-500;
+      @apply flex items-center justify-center;
+      /* @apply border border-orange-500; */
+    }
+  
+    .post-list-card-author {
+      grid-area: author;
+      @apply justify-self-center self-start;
+      @apply text-xs;
+      @apply lg:text-sm;
+      /* @apply border border-orange-500; */
+    }
+  
+    .post-list-card-title {
+      grid-area: title;
+      @apply font-bold;
+      @apply lg:text-xl lg:font-bold;
+      @apply truncate;
+      /* @apply border border-orange-500; */
+    }
+  
+    .post-list-card-description {
+      grid-area: description;
+      @apply self-start;
+      @apply text-sm lg:text-sm truncate;
+      /* @apply border border-orange-500; */
+    }
+  
+    .post-list-card-meta {
+      grid-area: meta;
+      @apply text-sm italic justify-self-end;
+      /* @apply border border-orange-500; */
+    }
+  
+  .copy-btn {
+    @apply sticky;
+    
+    left: calc(100% - 25px); 
+    top: -25px; 
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 4px 6px;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    @apply p-1.5; 
+  }
+
+  .copy-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: #8b949e;
+  }
+
+  .copy-btn svg {
+    fill: currentColor;
+    width: 16px;
+    height: 16px;
+  }
+
+  img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+}
+
+@layer utilities {
+  
+}

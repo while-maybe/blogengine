@@ -14,6 +14,8 @@ RUN go mod download
 
 COPY . .
 
+RUN make tailwind/install
+
 RUN make build
 
 # run stage

@@ -5,18 +5,44 @@ import (
     "blogengine/internal/content"
 )
 
+func getFirstRune(s string) string {
+    runes := []rune(s)
+    if len(runes) > 0 {
+        return string(runes[0])
+    }
+    return "?"
+}
+
 templ Home(posts []*content.Post, title string) {
     @baseTemplate(title) {
-        <h1>{ title }</h1>
-		<ul>
-			for _, p := range posts {
-				<li>
-					<a href={ templ.SafeURL(fmt.Sprintf("/post/%d", p.ID)) }>
-						{ p.Title } 
-					</a>
-					<span> - { p.ModifiedAt.Format("2006-01-02") }</span>
-				</li>
-			}
-		</ul>
+		<div class="main-content">
+			<ul class="post-list">
+				for _, p := range posts {
+					<li class="post-list-card">
+						<p class="post-list-card-image">
+							{ getFirstRune(p.Author) }						
+						</p>
+
+						<p class="post-list-card-title">
+							<a href={ templ.SafeURL(fmt.Sprintf("/post/%d", p.ID)) }>
+								{ p.Title } 
+							</a>
+						</p>
+
+						<p class="post-list-card-description">
+							{ p.Description }
+						</p>
+
+						<p class="post-list-card-author">
+							{ p.Author }
+						</p>
+
+						<p class="post-list-card-meta">
+							{ p.ModifiedAt.Format("02-01-2006") }
+						</p>
+					</li>
+				}
+			</ul>
+		</div>
     }
 }

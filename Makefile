@@ -4,10 +4,10 @@ MAIN_PACKAGE=./cmd/blogengine
 # export GOEXPERIMENT := jsonv2
 
 # load .env if exists
-# ifneq (,$(wildcard .env))
-#     include .env
-#     export
-# endif
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
 
 .DEFAULT_GOAL := help
 
@@ -68,6 +68,7 @@ build/all:
 .PHONY: run
 run:
 	@templ generate
+	@make tailwind/build
 	@go run $(MAIN_PACKAGE) $(ARGS)
 
 .PHONY: clean
@@ -79,3 +80,46 @@ clean:
 generate:
 	@echo 'Generating templates...'
 	@templ generate
+	@make tailwind/build
+
+TAILWIND_MAJOR_VERSION=4
+TAILWIND_BIN=./bin/tailwindcss
+
+# Determine OS and Arch for downloading the correct binary
+OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH := $(shell uname -m)
+
+# Map x86_64 to x64 for Tailwind naming convention
+ifeq ($(ARCH),x86_64)
+	ARCH := x64
+endif
+# Map arm64 (Mac/Pi) to arm64
+ifeq ($(ARCH),aarch64)
+	ARCH := arm64
+endif
+
+# Install the binary if it doesn't exist
+.PHONY: tailwind/install
+tailwind/install:
+	@if [ ! -f $(TAILWIND_BIN) ]; then \
+		echo "Downloading Tailwind CSS v$(TAILWIND_MAJOR_VERSION)..."; \
+		mkdir -p bin; \
+		LATEST=$$(curl -s https://api.github.com/repos/tailwindlabs/tailwindcss/releases | grep -o '"tag_name": "v$(TAILWIND_MAJOR_VERSION)\.[^"]*"' | head -1 | cut -d'"' -f4); \
+		echo "Detected version: $$LATEST"; \
+		curl -sL "https://github.com/tailwindlabs/tailwindcss/releases/download/$$LATEST/tailwindcss-$(OS)-$(ARCH)" -o $(TAILWIND_BIN); \
+		chmod +x $(TAILWIND_BIN); \
+		echo "Tailwind installed."; \
+	else \
+		echo "Tailwind binary already exists."; \
+	fi
+
+# Build CSS: depend on 'tailwind/install' to ensure binary exists
+.PHONY: tailwind/build
+tailwind/build: tailwind/install
+	@echo "Compiling Tailwind..."
+	@$(TAILWIND_BIN) -i ./static/tailwind.css -o ./static/style.css --minify
+
+# Watch Mode
+.PHONY: tailwind/watch
+tailwind/watch: tailwind/install
+	@$(TAILWIND_BIN) -i ./static/tailwind.css -o ./static/style.css --watch
