@@ -89,7 +89,7 @@ The application is configured via environment variables (or a `.env` file - an `
 | `APP_ENV` | Environment mode (`dev` or `prod`) | `prod` |
 | `APP_SOURCES_DIR` | Path to markdown files | `./sources` |
 
-### 🎨 Frontend Architecture
+### Frontend Architecture
 
 * **Zero-Dependency Tailwind:** Uses the **Tailwind v4 Standalone CLI** to generate styles without requiring Node.js, NPM, or complex JavaScript build tools.
 * **Build-Time Optimisation:** CSS is scanned from Templ components, compiled, and **minified** during the Docker build stage, ensuring the smallest possible payload.
@@ -126,6 +126,14 @@ The application is configured via environment variables (or a `.env` file - an `
 | `TUNNEL_TOKEN` | Cloudflare tunnel token | `none` |
 
 ## Roadmap (not in order and will likely be different tomorrow)
+
+### Completed
+
+Tailwind CSS Integration (Zero-dependency)
+GitOps / Automated Deployment
+Configuration Module (Env vars & Validation)
+
+### Coming soon
 
 * In-Memory Full Text Search: Implement a reverse index to search blog posts without an external database (like ElasticSearch).
 * RSS/Atom Feed Generation: Dynamic XML feed generation for content syndication.

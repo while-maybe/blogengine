@@ -21,24 +21,29 @@ type Post struct {
 	mu          sync.RWMutex
 }
 
-type Repository struct {
+// type Repository interface {
+// 	GetAll() []*Post
+// 	Get(id uint32) (*Post, error)
+// }
+
+type LocalRepository struct {
 	title string
 	Data  map[uint32]*Post
 	mu    sync.RWMutex
 }
 
-func NewRepository(title string) (*Repository, error) {
+func NewLocalRepository(title string) (*LocalRepository, error) {
 	if title == "" {
 		return nil, ErrRepositoryTitle
 	}
 
-	return &Repository{
+	return &LocalRepository{
 		title: title,
 		Data:  make(map[uint32]*Post),
 	}, nil
 }
 
-func (r *Repository) GetAll() []*Post {
+func (r *LocalRepository) GetAll() []*Post {
 	r.mu.RLock()
 
 	postsList := make([]*Post, 0, len(r.Data))
@@ -57,7 +62,7 @@ func (r *Repository) GetAll() []*Post {
 	return postsList
 }
 
-func (r *Repository) Get(id uint32) (*Post, error) {
+func (r *LocalRepository) Get(id uint32) (*Post, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -68,6 +73,6 @@ func (r *Repository) Get(id uint32) (*Post, error) {
 	return post, nil
 }
 
-func (r *Repository) Title() string {
+func (r *LocalRepository) Title() string {
 	return r.title
 }

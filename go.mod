@@ -5,6 +5,7 @@ go 1.25.6
 require (
 	github.com/a-h/templ v0.3.977
 	github.com/adrg/frontmatter v0.2.0
+	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/yuin/goldmark v1.7.16
 	github.com/yuin/goldmark-emoji v1.0.6
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc

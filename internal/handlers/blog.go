@@ -21,15 +21,17 @@ type PostProvider interface {
 // BlogHandler holds the state
 type BlogHandler struct {
 	Title    string
-	Store    PostProvider
+	Store    content.PostService
+	Renderer *content.MarkDownRenderer
 	Logger   *slog.Logger
 	GeoStats *middleware.GeoStats
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store *content.Repository, title string, logger *slog.Logger, geo *middleware.GeoStats) *BlogHandler {
+func NewBlogHandler(store *content.LocalRepository, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats) *BlogHandler {
 	return &BlogHandler{
 		Store:    store,
+		Renderer: renderer,
 		Title:    title,
 		Logger:   logger,
 		GeoStats: geo,
@@ -75,7 +77,8 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		}
 
 		// load content
-		htmlBytes, err := post.GetContent()
+		htmlBytes, err := post.GetContent(h.Renderer)
+		// REMEMBER htmlBytes, err := h.Renderer.Render(post.Content) - if lazy loading, this won't work as Content will be nil
 		if err != nil {
 			switch {
 			case errors.Is(err, content.ErrFileTooLarge):

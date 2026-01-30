@@ -27,7 +27,7 @@ type metaData struct {
 	NoIndex     bool   `yaml:"noindex"`
 }
 
-func (p *Repository) LoadLazyMetaFromDisk(paths []string) error {
+func (r *LocalRepository) LoadLazyMetaFromDisk(paths []string) error {
 	if len(paths) == 0 {
 		return ErrNoFilePaths
 	}
@@ -78,9 +78,9 @@ func (p *Repository) LoadLazyMetaFromDisk(paths []string) error {
 				IsSafeHTML:  false,
 			}
 
-			p.mu.Lock()
-			p.Data[newPost.ID] = newPost
-			p.mu.Unlock()
+			r.mu.Lock()
+			r.Data[newPost.ID] = newPost
+			r.mu.Unlock()
 
 			fmt.Printf(" -> Found: %q [%s]\n", cleanPath, meta.Title)
 		}()
@@ -105,7 +105,7 @@ func fallbackTitleScan(r io.Reader) string {
 }
 
 // GetContent returns the cached content or loads it from disk if missing.
-func (p *Post) GetContent() ([]byte, error) {
+func (p *Post) GetContent(renderer *MarkDownRenderer) ([]byte, error) {
 	// return contents directly if already cached
 	p.mu.RLock()
 	if p.Content != nil {
@@ -162,7 +162,7 @@ func (p *Post) GetContent() ([]byte, error) {
 	}
 
 	// into cache
-	if p.Content, err = mdToHTML(markdownBody); err != nil {
+	if p.Content, err = renderer.Render(markdownBody); err != nil {
 		return []byte{}, fmt.Errorf("%w: %v", ErrContentUnavailable, err)
 	}
 	return p.Content, nil
