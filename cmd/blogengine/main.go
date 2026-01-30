@@ -15,72 +15,38 @@ import (
 	"blogengine/internal/content"
 	"blogengine/internal/handlers"
 	"blogengine/internal/middleware"
+	"blogengine/internal/router"
+	"blogengine/internal/storage"
 )
 
 type App struct {
-	Repo   *content.Repository
 	Server *http.Server
 	Logger *slog.Logger
 	Config *config.Config
+	Posts  content.PostService
+	Media  content.MediaService
 }
 
-func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, error) {
-
-	repo, err := content.NewRepository(cfg.App.Name)
-	if err != nil {
-		return nil, fmt.Errorf("could not create repository: %w", err)
-	}
-
-	wantedFiles := "*.md"
-	files, err := filepath.Glob(filepath.Join(cfg.App.SourcesDir, wantedFiles))
-	if err != nil {
-		return nil, fmt.Errorf("failed to scan data sources: %w", err)
-	}
-	repo.LoadLazyMetaFromDisk(files)
-
-	limiter := middleware.NewIPRateLimiter(ctx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
-
-	geo := middleware.NewGeoStats(ctx)
-
-	h := handlers.NewBlogHandler(repo, cfg.App.Name, logger, geo)
-
-	mux := http.NewServeMux()
-
-	// static files
-	fs := http.FileServer(http.Dir("static"))
-	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
-	// routes
-	mux.Handle("GET /", h.HandleIndex())
-	mux.Handle("GET /post/", h.HandlePost())
-	mux.Handle("GET /metrics", h.HandleMetrics())
-
-	defaultMiddlewareStack := []middleware.Middleware{
-		middleware.Recover(logger),
-		limiter.Middleware(logger),
-		middleware.Logger(logger),
-		geo.Middleware(logger),
-	}
-
-	handleChain := middleware.Chain(mux, defaultMiddlewareStack...)
+func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts content.PostService, media content.MediaService, handler http.Handler) (*App, error) {
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTP.Port),
-		Handler:      handleChain,
+		Handler:      handler,
 		ReadTimeout:  cfg.HTTP.Timeouts.Read,
 		WriteTimeout: cfg.HTTP.Timeouts.Write,
 		IdleTimeout:  cfg.HTTP.Timeouts.Idle,
 	}
 
 	return &App{
-		Repo:   repo,
 		Server: server,
 		Logger: logger,
 		Config: cfg,
+		Posts:  posts,
+		Media:  media,
 	}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
-
 	srvErrChan := make(chan error, 1)
 
 	go func() {
@@ -115,17 +81,16 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func main() {
-	stderr := os.Stderr
-
 	cfg := config.LoadWithDefaults()
 	if err := cfg.Validate(); err != nil {
 		panic(fmt.Sprintf("invalid configuration: %v", err))
 	}
 
+	stderr := os.Stderr
 	logHandler := slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: cfg.Logger.Level})
 	logger := slog.New(logHandler).With("app", cfg.App.Name)
 
-	// Add PID to this log line
+	// Add PID
 	logger.Info("application starting", "pid", os.Getpid())
 	logger.Info("configuration loaded",
 		"name", cfg.App.Name,
@@ -134,14 +99,47 @@ func main() {
 		"port", cfg.HTTP.Port,
 		"rate_limit_rps", cfg.Limiter.RPS,
 		"trusted_proxy", cfg.Proxy.Trusted,
-		// Do NOT log cfg.Proxy.Token!
 	)
 
 	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	storageProvider := storage.NewLocalStorage(cfg.App.SourcesDir)
+	assetManager := content.NewAssetManager(storageProvider)
+
+	repo, err := content.NewLocalRepository(cfg.App.Name)
+	if err != nil {
+		logger.Error("could not create repository", "err", err)
+		os.Exit(1)
+	}
+
+	wantedFiles := "*.md"
+	files, err := filepath.Glob(filepath.Join(cfg.App.SourcesDir, wantedFiles))
+	if err != nil {
+		logger.Error("failed to scan data sources", "err", err)
+		os.Exit(1)
+	}
+	repo.LoadLazyMetaFromDisk(files)
+
+	renderer := content.NewMarkDownRenderer(assetManager)
+
+	limiter := middleware.NewIPRateLimiter(rootCtx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
+	geo := middleware.NewGeoStats(rootCtx)
+
+	blogHandler := handlers.NewBlogHandler(repo, renderer, cfg.App.Name, logger, geo)
+	assetHandler := &handlers.AssetHandler{Assets: assetManager}
+
+	router := router.NewRouter(router.RouterDependencies{
+		Cfg:          cfg,
+		Logger:       logger,
+		BlogHandler:  blogHandler,
+		AssetHandler: assetHandler,
+		Limiter:      limiter,
+		GeoStats:     geo,
+	})
+
 	// initialise
-	app, err := NewApp(rootCtx, cfg, logger)
+	app, err := NewApp(rootCtx, cfg, logger, repo, assetManager, router)
 	if err != nil {
 		logger.Error("server initialise", "err", err)
 		os.Exit(1)
