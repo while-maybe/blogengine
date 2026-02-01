@@ -32,8 +32,12 @@ func Observability(tracer trace.Tracer, metrics *telemetry.Metrics, logger *slog
 			// new logger
 			logger := logger.With("trace_id", traceID, "span_id", span.SpanContext().SpanID().String())
 
+			// using a bare string as a ctx key will cause a staticcheck error.
+			type contextKey string
+			const loggerKey contextKey = "logger"
+
 			// and add to context
-			ctx = context.WithValue(ctx, "logger", logger)
+			ctx = context.WithValue(ctx, loggerKey, logger)
 
 			// track active requests
 			metrics.HTTPActiveRequests.Add(ctx, 1)
