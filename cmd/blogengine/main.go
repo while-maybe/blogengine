@@ -17,17 +17,19 @@ import (
 	"blogengine/internal/middleware"
 	"blogengine/internal/router"
 	"blogengine/internal/storage"
+	"blogengine/internal/telemetry"
 )
 
 type App struct {
-	Server *http.Server
-	Logger *slog.Logger
-	Config *config.Config
-	Posts  content.PostService
-	Media  content.MediaService
+	Server    *http.Server
+	Logger    *slog.Logger
+	Config    *config.Config
+	Posts     content.PostService
+	Media     content.MediaService
+	Telemetry *telemetry.Telemetry
 }
 
-func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts content.PostService, media content.MediaService, handler http.Handler) (*App, error) {
+func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts content.PostService, media content.MediaService, handler http.Handler, tel *telemetry.Telemetry) (*App, error) {
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTP.Port),
@@ -38,11 +40,12 @@ func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts 
 	}
 
 	return &App{
-		Server: server,
-		Logger: logger,
-		Config: cfg,
-		Posts:  posts,
-		Media:  media,
+		Server:    server,
+		Logger:    logger,
+		Config:    cfg,
+		Posts:     posts,
+		Media:     media,
+		Telemetry: tel,
 	}, nil
 }
 
@@ -76,6 +79,12 @@ func (a *App) Run(ctx context.Context) error {
 		}
 		return fmt.Errorf("graceful shutdown failed: %w", err)
 	}
+
+	// reuse shutdownCtx here to give telemetry some time to finish
+	if err := a.Telemetry.Shutdown(shutdownCtx); err != nil {
+		a.Logger.Error("telemetry shutdown failed", "err", err)
+	}
+
 	a.Logger.Info("server stopped")
 	return nil
 }
@@ -104,6 +113,19 @@ func main() {
 	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// TODO hardcoded version
+	tel, err := telemetry.Init(rootCtx, cfg.App.Name, "1.0.0", cfg.App.Environment, cfg.Metrics.OtelEndpoint, cfg.Metrics.EnableTelemetry, logger)
+	if err != nil {
+		logger.Error("failed to init telemetry", "err", err)
+		os.Exit(1)
+	}
+
+	metrics, err := telemetry.NewMetrics(tel.Meter)
+	if err != nil {
+		logger.Error("failed to create metrics", "err", err)
+		os.Exit(1)
+	}
+
 	storageProvider := storage.NewLocalStorage(cfg.App.SourcesDir)
 	assetManager := content.NewAssetManager(storageProvider)
 
@@ -121,25 +143,37 @@ func main() {
 	}
 	repo.LoadLazyMetaFromDisk(files)
 
+	if len(repo.Data) == 0 {
+		logger.Warn("no posts found", "path", cfg.App.SourcesDir, "pattern", wantedFiles)
+	} else {
+		logger.Info("posts loaded", "count", len(repo.Data))
+		metrics.RecordPostsLoaded(rootCtx, len(repo.Data))
+	}
+
 	renderer := content.NewMarkDownRenderer(assetManager)
 
 	limiter := middleware.NewIPRateLimiter(rootCtx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
 	geo := middleware.NewGeoStats(rootCtx)
 
-	blogHandler := handlers.NewBlogHandler(repo, renderer, cfg.App.Name, logger, geo)
+	blogHandler := handlers.NewBlogHandler(repo, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics)
 	assetHandler := &handlers.AssetHandler{Assets: assetManager}
 
-	router := router.NewRouter(router.RouterDependencies{
-		Cfg:          cfg,
-		Logger:       logger,
-		BlogHandler:  blogHandler,
-		AssetHandler: assetHandler,
-		Limiter:      limiter,
-		GeoStats:     geo,
-	})
+	routerDeps := router.RouterDependencies{
+		Cfg:               cfg,
+		Logger:            logger,
+		BlogHandler:       blogHandler,
+		AssetHandler:      assetHandler,
+		Limiter:           limiter,
+		GeoStats:          geo,
+		Tracer:            tel.Tracer,
+		Metrics:           metrics,
+		PrometheusHandler: tel.PrometheusHandler,
+	}
+
+	router := router.NewRouter(routerDeps)
 
 	// initialise
-	app, err := NewApp(rootCtx, cfg, logger, repo, assetManager, router)
+	app, err := NewApp(rootCtx, cfg, logger, repo, assetManager, router, tel)
 	if err != nil {
 		logger.Error("server initialise", "err", err)
 		os.Exit(1)

@@ -4,16 +4,15 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: blogengine
-    restart: unless-stopped
-    # good idea for quick local access
+    # quick local access
     ports:
-      - "3000:3000"
+      - "${HTTP_PORT:-3000}:${HTTP_PORT:-3000}"
     environment:
-      - APP_NAME=${APP_NAME}
+      - APP_NAME=${APP_NAME:-"give me a name :("}
       - APP_ENV=dev
-      - APP_SOURCES_DIR=${APP_SOURCES_DIR}
+      - APP_SOURCES_DIR=${APP_SOURCES_DIR:-./sources}
 
-      - HTTP_PORT=${HTTP_PORT}
+      - HTTP_PORT=${HTTP_PORT:-3000}
       - HTTP_READ_TIMEOUT=${HTTP_READ_TIMEOUT}
       - HTTP_WRITE_TIMEOUT=${HTTP_WRITE_TIMEOUT}
       - HTTP_IDLE_TIMEOUT=${HTTP_IDLE_TIMEOUT}
@@ -23,6 +22,71 @@ services:
       - LIMITER_BURST=${LIMITER_BURST}
       
       - PROXY_TRUSTED=${PROXY_TRUSTED}
+
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-jaeger:4318}
+      - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-true}
     # to add your own .md files on your host and see them update
     # volumes:
     #   - ./sources:/root/sources
+    volumes:
+      - "${APP_SOURCES_DIR:-./sources}:/app/sources"
+    networks:
+      - blogengine_dev_network
+
+  # Observability Stack (Profile: obs)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    profiles: ["obs"]
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    networks:
+      - blogengine_dev_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    profiles: ["obs"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro 
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - blogengine_dev_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    profiles: ["obs"]
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/blogengine.json
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      
+    depends_on:
+      - prometheus
+    networks:
+      - blogengine_dev_network
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  blogengine_dev_network:
+    driver: bridge
+    name: blogengine_dev_network

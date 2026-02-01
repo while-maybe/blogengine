@@ -2,12 +2,14 @@
 
 A production-grade, concurrency-safe Markdown blog engine written in Go 1.25. Designed for efficiency, running smoothly on low-power hardware with minimal memory footprint (<5MB idle).
 
-At this stage the focus of the project is the backend (not the web design).
+The project focus is the backend (not the responsive web design) at this stage.
 
 **Status:** 🚧 Active Development 🚧
 
-🟢 **[Live Demo BLOG](<https://blog.fullmetal.party>)**
+🟢 **[Live Demo BLOG](https://blog.fullmetal.party)**
 (Running on self-hosted amd64 via Cloudflare Tunnel)
+
+🟢 **[Grafana public dashboard](https://grafana-blog.fullmetal.party)**
 
 ## Key Features (Implemented)
 
@@ -16,9 +18,17 @@ This project demonstrates Clean Architecture and Systems Programming patterns in
 ### Performance & Concurrency
 
 * **Lazy Loading:** Metadata is scanned on startup; heavy content is loaded on demand.
+* **Asset Pipeline:** Images are served via injected UUIDs to prevent path traversal, with aggressive caching headers.
 * **Thread-Safe Caching:** Implements Double-Checked Locking with sync.RWMutex to cache rendered content in memory without race conditions.
 * **Zero-Copy Optimisations:** Uses bytes.Clone and buffer pre-allocation during Markdown parsing to minimise Garbage Collector pressure
 * **Global Singletons:** Reuses the Goldmark engine instance to avoid allocation churn on requests.
+
+### Observability (OpenTelemetry, Jaeger, Prometheus, Grafana)
+
+* **Distributed Tracing:** Full integration with **Jaeger** via OTLP. Traces request lifecycle through middleware, database, and rendering layers.
+* **Metrics:** Prometheus-compatible metrics endpoint tracking Go runtime stats, HTTP latency, and custom business metrics (Active Posts, Geo Stats).
+* **Dashboarding:** Pre-provisioned **Grafana** dashboards via Infrastructure-as-Code (IaC).
+* **Feature Flagging:** Telemetry can be completely disabled via `ENABLE_TELEMETRY=false` for zero-overhead local development.
 
 ### Robustness & Security
 
@@ -35,19 +45,28 @@ This project demonstrates Clean Architecture and Systems Programming patterns in
 
 ## Project Structure
 
-```bash
+```text
 .
-├── cmd/blogengine/       # Entry point (Main, DI wiring)
+├── cmd/blogengine/       # Entry point (Dependency Injection)
 ├── internal/
-│   ├── components/       # Templ (HTML) view components
-│   ├── content/          # Data access layer (Disk IO, Caching)
+│   ├── config/           # Configuration & Validation
+│   ├── content/          # Asset Manager, Markdown Renderer, Repository
 │   ├── handlers/         # HTTP Transport layer
-│   └── middleware/       # Rate limiting, Logging, Recovery, Geostats
+│   ├── middleware/       # Rate limiting, GeoStats, OTel, Recovery
+│   ├── router/           # HTTP Mux wiring
+│   ├── storage/          # Disk/S3 abstraction
+│   └── telemetry/        # OpenTelemetry SDK setup
+├── observability/        # Grafana/Prometheus provisioning config
 ├── docker-compose.yml    # Local development stack
-└── Makefile              # Build automation
+└── docker-compose.production.yml # Production stack (with Tunnels & Updater)
 ```
 
 ## Running Locally
+
+### "Light" Mode (standalone app)
+
+Telemetry has obvious overhead / memory footprint increase which on lower powered devices can be detrimental so these can be disabled.
+Runs the Go binary locally (useful for writing content or quick logic changes).
 
 ```bash
 # 1. Clone and Setup
@@ -71,11 +90,35 @@ docker compose build
 docker compose up
 ```
 
+### "Full Stack" Mode - (app + observability)
+
+Spins up the app alongside Jaeger, Prometheus, and Grafana using Docker profiles.
+In your `.env` file, set both:
+
+1. `COMPOSE_PROFILES=obs` (sets Otel, Jaeger, Prometheus and Grafana to load when the docker compose stack is next brought up)
+2. `ENABLE_TELEMETRY=true` (enables OTel Tracing & Metrics)
+
+Run with:
+
+```bash
+# build the docker image
+docker compose build
+
+# run it
+docker compose up
+```
+
+## Dev (local ports) Access Points
+
+Blog: `http://localhost:3000`
+
+Grafana: `http://localhost:3001` (default user: admin / pass: admin)
+
+Jaeger UI: `http://localhost:16686`
+
 ## Configuration
 
 The application is configured via environment variables (or a `.env` file - an `example.env` file is provided to facilitate copying the option), otherwise defaults will be used.
-
-### Docker Settings
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
@@ -88,6 +131,15 @@ The application is configured via environment variables (or a `.env` file - an `
 | `APP_NAME` | Name displayed in header/title | `Strange Coding Blog` |
 | `APP_ENV` | Environment mode (`dev` or `prod`) | `prod` |
 | `APP_SOURCES_DIR` | Path to markdown files | `./sources` |
+| `ENABLE_TELEMETRY` | Enable OTel Tracing & Metrics | `true` |
+
+### Observability (If Enabled)
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Jaeger/Collector Address | `localhost:4318` |
+| `GRAFANA_PASSWORD` | Admin password for Grafana | `admin` |
+| `GF_SECURITY_ADMIN_USER ` | Admin username | `admin` |
 
 ### Frontend Architecture
 
@@ -129,14 +181,14 @@ The application is configured via environment variables (or a `.env` file - an `
 
 ### Completed
 
-Tailwind CSS Integration (Zero-dependency)
-GitOps / Automated Deployment
-Configuration Module (Env vars & Validation)
+* Tailwind CSS Integration (Zero-dependency)
+* GitOps / Automated Deployment
+* Configuration Module (Env vars & Validation)
+* OpenTelemetry Tracing: Replace standard logging with OTel traces to visualise request latency across the middleware chain.
 
 ### Coming soon
 
 * In-Memory Full Text Search: Implement a reverse index to search blog posts without an external database (like ElasticSearch).
 * RSS/Atom Feed Generation: Dynamic XML feed generation for content syndication.
-* OpenTelemetry Tracing: Replace standard logging with OTel traces to visualise request latency across the middleware chain.
 * Image Optimisation Pipeline: Middleware to resize/compress images on-the-fly (caching the results) to serve WebP to modern browsers.
 * SEO Optimisation: Auto-generate sitemap.xml and JSON-LD structured data for better search engine indexing.

@@ -4,6 +4,7 @@ import (
 	"blogengine/internal/components"
 	"blogengine/internal/content"
 	"blogengine/internal/middleware"
+	"blogengine/internal/telemetry"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,9 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type PostProvider interface {
@@ -25,21 +29,28 @@ type BlogHandler struct {
 	Renderer *content.MarkDownRenderer
 	Logger   *slog.Logger
 	GeoStats *middleware.GeoStats
+	Tracer   trace.Tracer
+	Metrics  *telemetry.Metrics
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store *content.LocalRepository, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats) *BlogHandler {
+func NewBlogHandler(store *content.LocalRepository, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics) *BlogHandler {
 	return &BlogHandler{
 		Store:    store,
 		Renderer: renderer,
 		Title:    title,
 		Logger:   logger,
 		GeoStats: geo,
+		Tracer:   tracer,
+		Metrics:  metrics,
 	}
 }
 
 func (h *BlogHandler) HandleIndex() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := h.Tracer.Start(r.Context(), "HandleIndex")
+		defer span.End()
+
 		// only allow '/'
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -47,15 +58,23 @@ func (h *BlogHandler) HandleIndex() http.Handler {
 		}
 
 		allPosts := h.Store.GetAll()
+		span.SetAttributes(attribute.Int("posts.count", len(allPosts)))
+
 		blogTitle := h.Title
 
-		components.Home(allPosts, blogTitle).Render(r.Context(), w)
+		components.Home(allPosts, blogTitle).Render(ctx, w)
 	})
 }
 
 func (h *BlogHandler) HandlePost() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		ctx, span := h.Tracer.Start(r.Context(), "HandlePost")
+		defer span.End()
+
 		idStr := strings.TrimPrefix(r.URL.Path, "/post/")
+		span.SetAttributes(attribute.String("post.id_str", idStr))
+
 		id64, err := strconv.ParseUint(idStr, 10, 32)
 		if err != nil {
 			http.NotFound(w, r)
@@ -63,8 +82,11 @@ func (h *BlogHandler) HandlePost() http.Handler {
 			return
 		}
 
+		postID := uint32(id64)
+		span.SetAttributes(attribute.Int("post.id", int(postID)))
+
 		// find the post
-		post, err := h.Store.Get(uint32(id64))
+		post, err := h.Store.Get(postID)
 		if err != nil {
 			switch {
 			case errors.Is(err, content.ErrPostNotFound):
@@ -75,6 +97,19 @@ func (h *BlogHandler) HandlePost() http.Handler {
 			}
 			return
 		}
+
+		span.SetAttributes(
+			attribute.String("post.title", post.Title),
+			attribute.String("post.author", post.Author),
+		)
+
+		// also record post view metrics
+		h.Metrics.PostViewsTotal.Add(ctx, 1,
+			metric.WithAttributes(
+				attribute.String("post.title", post.Title),
+				attribute.Int("post.id", int(postID)),
+			),
+		)
 
 		// load content
 		htmlBytes, err := post.GetContent(h.Renderer)
@@ -90,9 +125,11 @@ func (h *BlogHandler) HandlePost() http.Handler {
 			return
 		}
 
+		span.SetAttributes(attribute.Int("post.content_bytes", len(htmlBytes)))
+
 		body := templ.Raw(string(htmlBytes))
 		blogTitle := h.Title
 
-		components.BlogPost(blogTitle, body).Render(r.Context(), w)
+		components.BlogPost(blogTitle, body).Render(ctx, w)
 	})
 }

@@ -42,12 +42,18 @@ type ProxyConfig struct {
 	Token   string
 }
 
+type TelemetryConfig struct {
+	EnableTelemetry bool
+	OtelEndpoint    string
+}
+
 type Config struct {
 	App     AppConfig
 	Proxy   ProxyConfig
 	HTTP    HTTPConfig
 	Limiter RateLimiterConfig
 	Logger  LoggerConfig
+	Metrics TelemetryConfig
 }
 
 func DefaultConfig() *Config {
@@ -76,6 +82,9 @@ func DefaultConfig() *Config {
 		},
 		Logger: LoggerConfig{
 			Level: slog.LevelInfo,
+		},
+		Metrics: TelemetryConfig{
+			OtelEndpoint: "localhost:4318",
 		},
 	}
 }
@@ -108,6 +117,10 @@ func LoadWithDefaults() *Config {
 		},
 		Logger: LoggerConfig{
 			Level: getEnvAsLogLevel("LOGGER_LEVEL", defaults.Logger.Level),
+		},
+		Metrics: TelemetryConfig{
+			EnableTelemetry: getEnvAsBool("ENABLE_TELEMETRY", false),
+			OtelEndpoint:    getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", defaults.Metrics.OtelEndpoint),
 		},
 	}
 }

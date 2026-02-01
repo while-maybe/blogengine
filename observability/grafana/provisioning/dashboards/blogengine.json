@@ -1,0 +1,101 @@
+{
+  "title": "Blog Engine Metrics",
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP Requests/sec",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{method}} {{route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Request Duration (p95)",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(http_request_duration_milliseconds_bucket[5m]))",
+          "legendFormat": "p95 (ms)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Active HTTP Requests",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "http_active_requests"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Cache Hit Rate",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+      "targets": [
+        {
+          "expr": "rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m]))",
+          "legendFormat": "hit rate"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Posts Loaded",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+      "targets": [
+        {
+          "expr": "posts_loaded"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Rate Limit Hits",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+      "targets": [
+        {
+          "expr": "rate(rate_limit_hits_total[5m])"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Top Posts by Views",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "targets": [
+        {
+          "expr": "topk(10, sum by (post_title) (post_views_total))",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "HTTP Status Codes",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "targets": [
+        {
+          "expr": "sum by (http_status_code) (rate(http_requests_total[5m]))",
+          "legendFormat": "{{http_status_code}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser"
+}

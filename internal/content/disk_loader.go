@@ -3,6 +3,7 @@ package content
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 const maxBufferSize = 32 * 1024
@@ -36,7 +39,7 @@ func (r *LocalRepository) LoadLazyMetaFromDisk(paths []string) error {
 		func() {
 			cleanPath := strings.TrimSpace(fileName)
 
-			file, err := os.Open(cleanPath)
+			file, err := os.OpenInRoot(filepath.Split(cleanPath))
 			if err != nil {
 				fmt.Printf("%v: %s: %v\n", ErrReadingFile, cleanPath, err)
 			}
@@ -106,13 +109,25 @@ func fallbackTitleScan(r io.Reader) string {
 
 // GetContent returns the cached content or loads it from disk if missing.
 func (p *Post) GetContent(renderer *MarkDownRenderer) ([]byte, error) {
+	return p.GetContentWithMetrics(renderer, nil, nil)
+}
+
+func (p *Post) GetContentWithMetrics(renderer *MarkDownRenderer, cacheHits, cacheMisses metric.Int64Counter) ([]byte, error) {
 	// return contents directly if already cached
 	p.mu.RLock()
 	if p.Content != nil {
 		defer p.mu.RUnlock()
+		if cacheHits != nil {
+			cacheHits.Add(context.TODO(), 1, metric.WithAttributes(attribute.String("post.title", p.Title)))
+		}
 		return p.Content, nil
 	}
 	p.mu.RUnlock()
+
+	// if we're here that was a cache miss
+	if cacheMisses != nil {
+		cacheMisses.Add(context.TODO(), 1, metric.WithAttributes(attribute.String("post.title", p.Title)))
+	}
 
 	// load post from disk
 	p.mu.Lock()

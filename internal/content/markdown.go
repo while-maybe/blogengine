@@ -82,7 +82,7 @@ func (a *assetTransformer) Transform(node *ast.Document, reader text.Reader, pc 
 			return ast.WalkContinue, err
 		}
 
-		newPath, err := url.JoinPath("/static/", id.String())
+		newPath, err := url.JoinPath("/assets/", id.String())
 		if err != nil {
 			return ast.WalkContinue, err
 		}
