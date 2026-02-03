@@ -98,7 +98,7 @@ tailwind/install:
 	@if [ ! -f $(TAILWIND_BIN) ]; then \
 		echo "Downloading Tailwind CSS v$(TAILWIND_MAJOR_VERSION)..."; \
 		mkdir -p bin; \
-		LATEST=$$(curl -s https://api.github.com/repos/tailwindlabs/tailwindcss/releases | jq -r '.[0].tag_name') \
+		LATEST=$$(curl -s https://api.github.com/repos/tailwindlabs/tailwindcss/releases | grep -o '"tag_name": "v$(TAILWIND_MAJOR_VERSION)\.[^"]*"' | head -1 | cut -d'"' -f4); \
 		echo "Detected version: $$LATEST"; \
 		curl -sL "https://github.com/tailwindlabs/tailwindcss/releases/download/$$LATEST/tailwindcss-$(OS)-$(ARCH)" -o $(TAILWIND_BIN); \
 		echo "Tailwind installed."; \
