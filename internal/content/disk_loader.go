@@ -116,11 +116,12 @@ func (p *Post) GetContentWithMetrics(renderer *MarkDownRenderer, cacheHits, cach
 	// return contents directly if already cached
 	p.mu.RLock()
 	if p.Content != nil {
-		defer p.mu.RUnlock()
+		content := p.Content
+		p.mu.RUnlock()
 		if cacheHits != nil {
 			cacheHits.Add(context.TODO(), 1, metric.WithAttributes(attribute.String("post.title", p.Title)))
 		}
-		return p.Content, nil
+		return content, nil
 	}
 	p.mu.RUnlock()
 
