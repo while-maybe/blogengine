@@ -88,6 +88,7 @@ services:
 
   watchtower:
     image: nickfedor/watchtower:latest
+    container_name: watchtower
     restart: unless-stopped
     environment:
       - WATCHTOWER_POLL_INTERVAL=300
