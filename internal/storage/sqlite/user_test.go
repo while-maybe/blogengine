@@ -36,13 +36,11 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
-	store := setupTestStore(t)
-	// defer store.Close() - remember t.Cleanup() in setupEnvironment
-
-	ctx := context.Background()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			store := setupTestStore(t)
+			ctx := context.Background()
+
 			t.Parallel()
 
 			got, gotErr := store.CreateUser(ctx, tt.want.Username, tt.want.PasswordHash)
@@ -97,13 +95,11 @@ func TestGetUserByUsername(t *testing.T) {
 		},
 	}
 
-	store := setupTestStore(t)
-	// defer store.Close() - remember t.Cleanup() in setupEnvironment
-
-	ctx := context.Background()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			store := setupTestStore(t)
+			ctx := context.Background()
+
 			t.Parallel()
 
 			_, err := store.CreateUser(ctx, tt.username, tt.want.PasswordHash)
@@ -151,13 +147,12 @@ func TestGetUserByID(t *testing.T) {
 		},
 	}
 
-	store := setupTestStore(t)
-	// defer store.Close() - remember t.Cleanup() in setupEnvironment
-
-	ctx := context.Background()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			store := setupTestStore(t)
+			ctx := context.Background()
+
 			t.Parallel()
 
 			u, err := store.CreateUser(ctx, "user_"+gen60CharString()[:5], gen60CharString())
@@ -178,8 +173,8 @@ func TestGetUserByID(t *testing.T) {
 				return
 			}
 
-			if tt.wantID != got.ID {
-				t.Errorf("user ID does not match: want %q, got %q", tt.wantID, got.ID)
+			if got.ID != u.ID {
+				t.Errorf("user ID does not match: want %d, got %d", tt.wantID, got.ID)
 			}
 		})
 	}
@@ -211,13 +206,11 @@ func TestChangeUserPassword(t *testing.T) {
 		},
 	}
 
-	store := setupTestStore(t)
-	// defer store.Close() - remember t.Cleanup() in setupEnvironment
-
-	ctx := context.Background()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			store := setupTestStore(t)
+			ctx := context.Background()
+
 			t.Parallel()
 
 			username := "user_" + gen60CharString()[:5]
@@ -239,11 +232,13 @@ func TestChangeUserPassword(t *testing.T) {
 				t.Fatalf("unexpected error: got %v, want %v", err, tt.wantErr)
 			}
 
-			// GetUserById is not getting tested
-			got, _ := store.GetUserByID(ctx, workingID)
-
 			if tt.wantErr != nil {
 				return
+			}
+
+			got, err := store.GetUserByID(ctx, workingID)
+			if err != nil {
+				t.Fatalf("could not fetch user after password change: %v", err)
 			}
 
 			if hash == got.PasswordHash {
@@ -281,13 +276,11 @@ func TestDeleteUser(t *testing.T) {
 		},
 	}
 
-	store := setupTestStore(t)
-	// defer store.Close() - remember t.Cleanup() in setupEnvironment
-
-	ctx := context.Background()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			store := setupTestStore(t)
+			ctx := context.Background()
+
 			t.Parallel()
 
 			username := "user_" + gen60CharString()[:5]
@@ -322,75 +315,9 @@ func TestDeleteUser(t *testing.T) {
 	}
 }
 
-func TestUserCRUD(t *testing.T) {
-	t.Parallel()
-	store := setupTestStore(t)
-	defer store.Close()
-
-	ctx := context.Background()
-
-	t.Run("create and get user", func(t *testing.T) {
-		username := "testuser"
-
-		hash := gen60CharString()
-
-		// CreateUser
-		user, err := store.CreateUser(ctx, username, hash)
-		if err != nil {
-			t.Fatalf("failed to create user: %v", err)
-		}
-
-		if user.Username != username {
-			t.Errorf("want %s, got %s", username, user.Username)
-		}
-
-		// GetUserByUsername
-		foundByUsername, err := store.GetUserByUsername(ctx, username)
-		if err != nil {
-			t.Fatalf("failed to get user by username: %v", err)
-		}
-
-		if foundByUsername.ID != user.ID {
-			t.Errorf("ID mismatch: want %d, got %d", user.ID, foundByUsername.ID)
-		}
-
-		// GetUserByID
-		foundByID, err := store.GetUserByID(ctx, user.ID)
-		if err != nil {
-			t.Fatalf("failed to get user by id: %v", err)
-		}
-
-		if foundByUsername.ID != user.ID {
-			t.Errorf("ID mismatch: want %d, got %d", user.ID, foundByID.ID)
-		}
-
-		// ChangeUserPassword
-		oldHash := user.PasswordHash
-		newHash := "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lnew"
-		if err := store.ChangeUserPassword(ctx, user.ID, newHash); err != nil {
-			t.Fatalf("could not change password: %v", err)
-		}
-		updatedUser, err := store.GetUserByID(ctx, user.ID)
-		if err != nil {
-			t.Fatalf("could not get updated user with ID %d: %v", user.ID, err)
-		}
-		if updatedUser.PasswordHash == oldHash {
-			t.Errorf("password was not updated")
-		}
-
-		// DeleteUser
-		if err := store.DeleteUser(ctx, user.ID); err != nil {
-			t.Fatalf("could not delete user: %v", err)
-		}
-		_, err = store.GetUserByID(ctx, user.ID)
-		if !errors.Is(err, storage.ErrNotFound) {
-			t.Errorf("expected user to be soft deleted, got: %v", err)
-		}
-
-	})
-}
-
 func TestDeleteUser_ContextError(t *testing.T) {
+	t.Parallel()
+
 	store := setupTestStore(t)
 	ctx, cancel := context.WithCancel(context.Background())
 

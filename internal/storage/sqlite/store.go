@@ -51,8 +51,3 @@ func (s *Store) WithTx(ctx context.Context, fn func(*sqlx.Tx) error) error {
 
 	return tx.Commit()
 }
-
-// TODO update modified_at when changing a comment content
-// TODO LIMIT 1 for 1 entry operations
-// TODO check if idempotentency should be present (updating returns the updated object instead of nil error)
-// TODO get user functions to now consider is user has been soft deleted
