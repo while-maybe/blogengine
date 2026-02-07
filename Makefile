@@ -16,6 +16,12 @@ help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'
 
+## install-tools: install required binaries for development
+.PHONY: install-tools
+install-tools:
+	go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+	go install github.com/a-h/templ/cmd/templ@latest
+
 .PHONY: audit
 audit:
 	@echo "1. Tidying dependencies..."
@@ -117,3 +123,46 @@ tailwind/build: tailwind/install
 .PHONY: tailwind/watch
 tailwind/watch: tailwind/install
 	@$(TAILWIND_BIN) -i ./static/tailwind.css -o ./static/style.css --watch
+
+DB_URL ?= sqlite3://./blog.db
+MIGRATIONS_DIR ?= ./migrations
+
+## db/migrations/new name=$1: create a new database migration
+.PHONY: db/migrations/new
+db/migrations/new:
+	@echo 'Creating migration files for $(name)...'
+	@migrate create -seq -ext=.sql -dir=$(MIGRATIONS_DIR) $(name)
+
+## db/migrations/up: apply all up database migrations
+.PHONY: db/migrations/up
+db/migrations/up:
+	@echo "running UP migrations..."
+	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) up
+
+## db/migrations/down: apply all down database migrations
+.PHONY: db/migrations/down
+db/migrations/down:
+	@echo "running DOWN migrations..."
+	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) down
+
+.PHONY: db/migrations/version
+db/migrations/version:
+	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) version
+
+.PHONY: db/migrations/force
+db/migrations/force:
+	@test -n "$(version)" || (echo "Error: version is required. Usage: make db/migrations/force version=1" && exit 1)
+	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) force $(version)
+
+.PHONY: db/migrations/test
+db/migrations/test:
+	@echo "Testing migrations..."
+	@rm -f test.db
+	@migrate -path $(MIGRATIONS_DIR) -database sqlite3://test.db up
+	@echo "UP migrations passed"
+	@migrate -path $(MIGRATIONS_DIR) -database sqlite3://test.db down
+	@echo "DOWN migrations passed"
+	@migrate -path $(MIGRATIONS_DIR) -database sqlite3://test.db up
+	@echo "Re-applying UP migrations passed"
+	@rm -f test.db
+	@echo "All migration tests passed!"
