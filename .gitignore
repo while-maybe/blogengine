@@ -203,6 +203,7 @@ folder_info.md
 ./jsonserver
 
 # exclude sqlite db file
+*.db
 
 # excluse local *.json db files
 db.json
