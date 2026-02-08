@@ -28,12 +28,17 @@ FROM alpine:latest
 # Add non-root user: # -S = system user, -G = add to group
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Change from /root/ to /app
+
 WORKDIR /app
+
+
+# sqlite db will need persistent storage
+RUN mkdir data
 
 COPY --from=builder /app/bin/blogengine .
 COPY --from=builder /app/static ./static
 COPY --from=builder /app/sources ./sources
+COPY --from=builder /app/migrations ./migrations
 
 # change ownership
 RUN chown -R appuser:appgroup /app
@@ -50,5 +55,8 @@ HEALTHCHECK --interval=30s --timeout=3s \
 ENV HTTP_PORT=3000
 ENV APP_NAME="BlogEngine Default"
 ENV APP_ENV="prod"
+
+ENV DB_PATH="/app/data/blogengine.db"
+ENV DB_MIGRATIONS_PATH="/app/migrations"
 
 ENTRYPOINT ["./blogengine"]

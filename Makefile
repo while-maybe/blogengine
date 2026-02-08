@@ -33,7 +33,7 @@ audit:
 	@echo "4. Static Check..."
 	@if command -v staticcheck >/dev/null; then staticcheck ./...; else echo "staticcheck not found, skipping"; fi
 	@echo "5. Running tests with race detector..."
-	@go test -race ./...
+	@go test -race -tags=integration ./...
 
 .PHONY: fmt
 fmt:
@@ -43,11 +43,11 @@ fmt:
 
 .PHONY: test
 test:
-	@go test ./... -v
+	@go test -v -tags=integration ./...
 
 .PHONY: test/coverage
 test/coverage:
-	@go test -coverprofile=coverage.out ./...
+	@go test -coverprofile=coverage.out -tags=integration ./...
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated at coverage.html"
 

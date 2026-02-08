@@ -205,6 +205,14 @@ folder_info.md
 # exclude sqlite db file
 *.db
 
+# exclude SQLite temporary/journal files
+*.db-wal
+*.db-shm
+*.db-journal
+
+# Local data folder
+/data
+
 # excluse local *.json db files
 db.json
 

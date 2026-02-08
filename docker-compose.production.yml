@@ -6,7 +6,10 @@ services:
     environment:
       - APP_NAME=${APP_NAME:-"give me a name :("}
       - APP_ENV=prod
-      - APP_SOURCES_DIR=${APP_SOURCES_DIR:-./sources}
+      - APP_SOURCES_DIR=${APP_SOURCES_DIR:-/app/sources}
+
+      - DB_PATH=${DB_PATH:-/app/data/blogengine.db}
+      - DB_MIGRATIONS_PATH=${DB_MIGRATIONS_PATH:-/app/migrations}
 
       - HTTP_PORT=${HTTP_PORT:-3000}
       
@@ -20,6 +23,7 @@ services:
 
     volumes:
       - "${APP_SOURCES_DIR:-./sources}:/app/sources"
+      - blog_data:/app/data
     networks:
       - blogengine_network
 
@@ -99,6 +103,7 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  blog_data:
 
 networks:
   blogengine_network:

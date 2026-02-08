@@ -1,9 +1,42 @@
+# Git
 .git
-bin/
-.env
-README.md
+.gitignore
 
-# project specific ignores
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Local Binaries and Build Artifacts
+bin/
+blogengine
+tailwindcss
+act
+coverage.out
+coverage.html
+
+# Local Database Files (Crucial!)
+# You don't want your dev data or locks inside the image
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+data/
+
+# Environment and Secrets
+.env
+*.env
+example.env
+
+# Tooling / Scripts
 gather_code.sh
-project_cde.txt
 zDocs/
+
+# Templ Generated Files
+# We ignore these because the Dockerfile 'builder' stage 
+# runs 'templ generate' itself to ensure consistency.
+*_templ.go
+
+# If you ever use node/npm for other tools
+node_modules
