@@ -17,6 +17,7 @@ import (
 	"blogengine/internal/middleware"
 	"blogengine/internal/router"
 	"blogengine/internal/storage"
+	"blogengine/internal/storage/sqlite"
 	"blogengine/internal/telemetry"
 )
 
@@ -26,10 +27,11 @@ type App struct {
 	Config    *config.Config
 	Posts     content.PostService
 	Media     content.MediaService
+	DB        storage.Store
 	Telemetry *telemetry.Telemetry
 }
 
-func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts content.PostService, media content.MediaService, handler http.Handler, tel *telemetry.Telemetry) (*App, error) {
+func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts content.PostService, media content.MediaService, handler http.Handler, db storage.Store, tel *telemetry.Telemetry) (*App, error) {
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTP.Port),
@@ -45,6 +47,7 @@ func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts 
 		Config:    cfg,
 		Posts:     posts,
 		Media:     media,
+		DB:        db,
 		Telemetry: tel,
 	}, nil
 }
@@ -152,10 +155,24 @@ func main() {
 
 	renderer := content.NewMarkDownRenderer(assetManager)
 
+	db, err := sqlite.NewStore(cfg.DB.Path)
+	if err != nil {
+		logger.Error("failed to create database", "path", cfg.DB.Path, "err", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	if err := db.Migrate(cfg.DB.MigrationsPath); err != nil {
+		logger.Error("db migration failed", "path", cfg.DB.MigrationsPath, "err", err)
+		os.Exit(1)
+	}
+
+	logger.Info("database migrated successfully")
+
 	limiter := middleware.NewIPRateLimiter(rootCtx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
 	geo := middleware.NewGeoStats(rootCtx)
 
-	blogHandler := handlers.NewBlogHandler(repo, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics)
+	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics)
 	assetHandler := &handlers.AssetHandler{Assets: assetManager}
 
 	routerDeps := router.RouterDependencies{
@@ -173,7 +190,7 @@ func main() {
 	router := router.NewRouter(routerDeps)
 
 	// initialise
-	app, err := NewApp(rootCtx, cfg, logger, repo, assetManager, router, tel)
+	app, err := NewApp(rootCtx, cfg, logger, repo, assetManager, router, db, tel)
 	if err != nil {
 		logger.Error("server initialise", "err", err)
 		os.Exit(1)

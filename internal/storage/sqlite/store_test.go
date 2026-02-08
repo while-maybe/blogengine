@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func TestStoreImplementsInterface(t *testing.T) {
@@ -42,17 +40,11 @@ func setupTestStore(t *testing.T) *Store {
 	}
 
 	migrationsPath := "../../../migrations"
-	m, err := migrate.New("file://"+migrationsPath, "sqlite3://"+dbPath.Name())
-	if err != nil {
-		t.Fatalf("creating migrations failed: %v", err)
-	}
-
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+	if err := store.Migrate(migrationsPath); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		t.Fatalf("migration failed: %v", err)
 	}
 
 	t.Cleanup(func() {
-		m.Close()
 		store.Close()
 	})
 

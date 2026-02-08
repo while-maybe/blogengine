@@ -4,6 +4,7 @@ import (
 	"blogengine/internal/components"
 	"blogengine/internal/content"
 	"blogengine/internal/middleware"
+	"blogengine/internal/storage"
 	"blogengine/internal/telemetry"
 	"errors"
 	"log/slog"
@@ -26,6 +27,7 @@ type PostProvider interface {
 type BlogHandler struct {
 	Title    string
 	Store    content.PostService
+	DB       storage.Store
 	Renderer *content.MarkDownRenderer
 	Logger   *slog.Logger
 	GeoStats *middleware.GeoStats
@@ -34,9 +36,10 @@ type BlogHandler struct {
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store *content.LocalRepository, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics) *BlogHandler {
+func NewBlogHandler(store content.PostService, db storage.Store, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics) *BlogHandler {
 	return &BlogHandler{
 		Store:    store,
+		DB:       db,
 		Renderer: renderer,
 		Title:    title,
 		Logger:   logger,

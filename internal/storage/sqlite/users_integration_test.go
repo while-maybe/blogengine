@@ -12,6 +12,7 @@ import (
 func TestUserCRUD(t *testing.T) {
 	t.Parallel()
 	store := setupTestStore(t)
+
 	defer store.Close()
 
 	ctx := context.Background()

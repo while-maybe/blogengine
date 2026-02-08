@@ -37,6 +37,11 @@ type AppConfig struct {
 	SourcesDir  string
 }
 
+type DBConfig struct {
+	Path           string
+	MigrationsPath string
+}
+
 type ProxyConfig struct {
 	Trusted bool
 	Token   string
@@ -49,6 +54,7 @@ type TelemetryConfig struct {
 
 type Config struct {
 	App     AppConfig
+	DB      DBConfig
 	Proxy   ProxyConfig
 	HTTP    HTTPConfig
 	Limiter RateLimiterConfig
@@ -62,6 +68,10 @@ func DefaultConfig() *Config {
 			Name:        "Your blog",
 			Environment: "prod",
 			SourcesDir:  "./sources",
+		},
+		DB: DBConfig{
+			Path:           "blogengine.db",
+			MigrationsPath: "./migrations",
 		},
 		Proxy: ProxyConfig{
 			Trusted: true,
@@ -96,6 +106,10 @@ func LoadWithDefaults() *Config {
 			Name:        getEnv("APP_NAME", defaults.App.Name),
 			Environment: getEnv("APP_ENV", defaults.App.Environment),
 			SourcesDir:  getEnv("APP_SOURCES_DIR", defaults.App.SourcesDir),
+		},
+		DB: DBConfig{
+			Path:           getEnv("DB_PATH", defaults.DB.Path),
+			MigrationsPath: getEnv("DB_MIGRATIONS_PATH", defaults.DB.MigrationsPath),
 		},
 		Proxy: ProxyConfig{
 			Trusted: getEnvAsBool("PROXY_TRUSTED", defaults.Proxy.Trusted),
@@ -193,6 +207,12 @@ func (c *Config) Validate() error {
 	}
 	if s := strings.ToLower(c.App.Environment); s != "dev" && s != "prod" {
 		return fmt.Errorf(`APP_ENV must be "dev" or "prod"`)
+	}
+	if c.DB.Path == "" {
+		return fmt.Errorf("DB_PATH must not be empty")
+	}
+	if c.DB.MigrationsPath == "" {
+		return fmt.Errorf("DB_MIGRATIONS_PATH must not be empty")
 	}
 	// stay away from well-known ports
 	if p := c.HTTP.Port; p < 1024 || p > 65535 {
