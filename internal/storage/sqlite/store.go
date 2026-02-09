@@ -3,6 +3,7 @@ package sqlite
 import (
 	"blogengine/internal/storage"
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/jmoiron/sqlx"
@@ -26,6 +27,11 @@ func NewStore(dbPath string) (*Store, error) {
 // Close closes the database connection
 func (s *Store) Close() error {
 	return s.db.Close()
+}
+
+// RawDB returns the underlying sql/DB that sqlx uses mostly for session manager
+func (s *Store) RawDB() *sql.DB {
+	return s.db.DB
 }
 
 func validateContent(content string) error {
