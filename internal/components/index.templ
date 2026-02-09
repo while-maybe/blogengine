@@ -13,9 +13,9 @@ func getFirstRune(s string) string {
     return "?"
 }
 
-templ Home(posts []*content.Post, title string) {
-    @baseTemplate(title) {
-		<div class="main-content">
+templ Home(posts []*content.Post, title, username string) {
+    @baseTemplate(title, username) {
+		<main class="main-content">
 			<ul class="post-list">
 				for _, p := range posts {
 					<li class="post-list-card">
@@ -43,6 +43,6 @@ templ Home(posts []*content.Post, title string) {
 					</li>
 				}
 			</ul>
-		</div>
+		</main>
     }
 }

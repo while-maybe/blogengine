@@ -1,11 +1,31 @@
 package components
 
-templ headerTemplate(title string) {
+templ headerTemplate(title, username string) {
   <header class="top-banner" id="main-header">
     <div class="banner-content">
         <h1>
-          <a href="/" class="brand">{title}</a>
+          <a href="/" class="brand text-2xl lg:text-4xl">{title}</a>
         </h1>
+
+        <nav class="flex items-center gap-x-4">
+        if username != "" {
+                <div class="flex items-center gap-x-4">
+                    <span class="text-text-muted text-sm hidden md:block">Welcome, <b class="text-text-main">{ username }</b></span>
+                    <form action="/logout" method="POST" class="inline">
+                        <button type="submit" class="text-sm font-semibold text-accent hover:underline cursor-pointer bg-transparent border-none p-0">
+                            Logout
+                        </button>
+                    </form>
+                </div>
+        } else {
+                <div class="flex items-center gap-x-4">
+                    <a href="/login" class="text-sm font-semibold text-text-main hover:text-accent transition-colors">Login</a>
+                    <a href="/register" class="px-4 py-2 bg-accent text-brand-dark text-sm font-bold rounded-lg hover:opacity-90 transition-opacity">
+                        Register
+                    </a>
+                </div>
+            }
+        </nav>
     </div>
   </header>
 }

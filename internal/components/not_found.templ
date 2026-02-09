@@ -1,0 +1,19 @@
+package components
+
+templ NotFound(title, username string) {
+    @baseTemplate(title, username) {
+        <main class="flex flex-col items-center justify-center w-full px-4 text-center gap-8 my-2">
+            <h1 class="my-0 leading-none text-[12rem] font-sans font-black text-brand-edge opacity-50">404</h1>
+            
+            <h2 class="my-0 text-4xl font-serif">Page Not Found</h2>
+
+            <p class="text-text-muted max-w-md mx-auto ">
+                The path you are looking for doesn't exist, has been moved, or you might have typed the URL incorrectly.
+            </p>
+
+            <a href="/" class="inline-block px-6 py-3 bg-accent text-brand-dark font-bold rounded-lg transition-transform hover:scale-105 active:scale-95">
+                Back to Homepage
+            </a>
+        </main>
+    }
+}

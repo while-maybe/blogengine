@@ -21,7 +21,7 @@
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   
   /* Layout */
-  --spacing-header: 120px;
+  --spacing-header: 70px;
   --width-page: 1200px;
 }
 
@@ -39,18 +39,18 @@
 
   /* Optional: Global reset for headers to use the serif font */
   h1 {
-    @apply font-serif text-white text-4xl my-3;
-    @apply md:text-6xl md:my-5;
+    @apply font-serif text-white text-3xl my-3;
+    @apply md:text-5xl md:my-5;
   }
 
   h2 {
-    @apply font-serif text-white text-3xl mt-5 mb-2;
-    @apply md:text-5xl md:mt-7 md:mb-3;
+    @apply font-serif text-white text-2xl mt-5 mb-2;
+    @apply md:text-4xl md:mt-7 md:mb-3;
   }
 
   h3, h4, h5, h6 {
-    @apply font-serif text-white text-2xl mt-5 mb-2;
-    @apply md:text-4xl md:mt-7 md:mb-3;
+    @apply font-serif text-white text-xl mt-5 mb-2;
+    @apply md:text-3xl md:mt-7 md:mb-3;
   }
 
   p {
@@ -61,7 +61,7 @@
 @layer components {
   .top-banner {
     @apply sticky top-0 z-50;
-    @apply w-full h-header flex flex-col justify-center items-center;
+    @apply w-full h-header md:h-[85px] flex flex-col justify-center items-center;
     background-image: 
       linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 0.9)), 
       url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
@@ -72,7 +72,8 @@
   }
   
   .banner-content { 
-    @apply lg:w-3/4 h-auto text-center flex flex-col justify-center;
+    @apply w-full h-auto text-center flex flex-row justify-between items-center px-6;
+    @apply lg:w-3/4
     /* @apply border-2 border-accent; */
   }
   
@@ -82,13 +83,13 @@
   }
   
   .footer-banner {
-    @apply w-full h-12 flex flex-col justify-center items-center;
+    @apply w-full h-10 flex flex-col justify-center items-center;
     background-image:linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 0.9));
     /* @apply border border-amber-300; */
   }
   
   .footer-content { 
-    @apply font-serif text-lg;
+    @apply font-serif ;
     @apply lg:w-3/4 h-100 text-center flex flex-col justify-center;
   }
 }
@@ -98,9 +99,9 @@
 /* blog page */
 @layer components {
   .layout-container {
+    @apply px-2;
     @apply w-full;
-    @apply lg:w-3/4 p-2;
-    /* @apply border border-amber-300; */
+    @apply lg:w-3/4;
   }
   
   .markdown-body pre {
@@ -227,6 +228,55 @@
     border-radius: 8px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   }
+
+  /* register page */
+  .layout-container-register {
+    @apply flex grow items-center justify-center px-4;
+    @apply w-full;
+    @apply lg:w-3/4;
+    /* @apply border border-amber-300; */
+  }
+
+  .auth-card {
+    @apply w-full max-w-md mx-auto p-4;
+    @apply bg-brand-card border border-brand-edge rounded-xl;
+    @apply shadow-2xl;
+    /* @apply border border-amber-300; */
+  }
+
+  .form-group {
+    @apply mb-5 flex flex-col gap-y-1.5;
+  }
+
+  .form-label {
+    @apply text-sm font-semibold text-text-main uppercase tracking-wider pl-1.5;
+  }
+
+  .form-input {
+    @apply w-full px-4 py-2.5;
+    @apply bg-brand-dark border border-brand-edge rounded-lg;
+    @apply text-text-main placeholder:text-text-muted;
+    @apply transition-all outline-none;
+    @apply focus:border-accent focus:ring-1 focus:ring-accent;
+  }
+
+  .btn-primary {
+    @apply w-full py-3 px-4;
+    @apply bg-accent text-brand-dark font-bold rounded-lg;
+    @apply transition-all transform hover:opacity-90 active:scale-95 cursor-pointer;
+  }
+
+  .error-banner {
+    @apply mb-6 p-4 bg-red-500/10 border border-red-500/50 text-red-400 text-sm rounded-lg;
+  }
+
+  /* login page */
+  .layout-container-login{
+    @apply flex grow items-center justify-center px-4;
+    @apply w-full;
+    @apply lg:w-3/4;
+  }
+
 }
 
 @layer utilities {

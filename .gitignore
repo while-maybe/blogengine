@@ -228,7 +228,7 @@ gather_code.sh
 project_code.txt
 
 # templ generated go code
-components/*_templ.go
+internal/components/*_templ.go
 
 # Go dependency directories
 vendor/
