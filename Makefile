@@ -117,7 +117,7 @@ tailwind/install:
 .PHONY: tailwind/build
 tailwind/build: tailwind/install
 	@echo "Compiling Tailwind..."
-	@$(TAILWIND_BIN) -i ./static/tailwind.css -o ./static/style.css --minify
+	@$(TAILWIND_BIN) -i ./static/tailwind.css -o ./static/style.css --content "internal/components/**/*.templ" --minify
 
 # Watch Mode
 .PHONY: tailwind/watch

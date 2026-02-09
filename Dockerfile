@@ -15,12 +15,22 @@ RUN go mod download
 
 COPY . .
 
-RUN make tailwind/install
-RUN make tailwind/build
+# tailwind
+RUN OS=$(uname -s | tr '[:upper:]' '[:lower:]') && \
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then ARCH="x64"; fi && \
+    if [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
+    curl -f -sL "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$OS-$ARCH" -o ./tailwindcss && \
+    chmod +x ./tailwindcss
 
+# generate templates
+RUN templ generate
+
+RUN ./tailwindcss -i ./static/tailwind.css -o ./static/style.css --minify
 # Create a static binary
 ENV CGO_ENABLED=0
-RUN make build
+RUN go build -ldflags="-s -w" -o ./blogengine ./cmd/blogengine/main.go
+
 
 # run stage - ON ALPINE!
 FROM alpine:latest
@@ -28,14 +38,12 @@ FROM alpine:latest
 # Add non-root user: # -S = system user, -G = add to group
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-
 WORKDIR /app
-
 
 # sqlite db will need persistent storage
 RUN mkdir data
 
-COPY --from=builder /app/bin/blogengine .
+COPY --from=builder /app/blogengine .
 COPY --from=builder /app/static ./static
 COPY --from=builder /app/sources ./sources
 COPY --from=builder /app/migrations ./migrations
