@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"blogengine/internal/config"
 	"blogengine/internal/content"
@@ -169,10 +170,14 @@ func main() {
 
 	logger.Info("database migrated successfully")
 
+	// session manager
+	sessionLifetime := 24 * time.Hour
+	session := middleware.NewSessionManager(sessionLifetime, cfg.App.Environment == "prod", db.RawDB())
+
 	limiter := middleware.NewIPRateLimiter(rootCtx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
 	geo := middleware.NewGeoStats(rootCtx)
 
-	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics)
+	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics, session)
 	assetHandler := &handlers.AssetHandler{Assets: assetManager}
 
 	routerDeps := router.RouterDependencies{
@@ -185,6 +190,7 @@ func main() {
 		Tracer:            tel.Tracer,
 		Metrics:           metrics,
 		PrometheusHandler: tel.PrometheusHandler,
+		Session:           session,
 	}
 
 	router := router.NewRouter(routerDeps)

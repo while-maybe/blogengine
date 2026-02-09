@@ -33,10 +33,11 @@ type BlogHandler struct {
 	GeoStats *middleware.GeoStats
 	Tracer   trace.Tracer
 	Metrics  *telemetry.Metrics
+	Sessions *middleware.Sessions
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store content.PostService, db storage.Store, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics) *BlogHandler {
+func NewBlogHandler(store content.PostService, db storage.Store, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics, sm *middleware.Sessions) *BlogHandler {
 	return &BlogHandler{
 		Store:    store,
 		DB:       db,
@@ -46,6 +47,7 @@ func NewBlogHandler(store content.PostService, db storage.Store, renderer *conte
 		GeoStats: geo,
 		Tracer:   tracer,
 		Metrics:  metrics,
+		Sessions: sm,
 	}
 }
 
@@ -54,18 +56,13 @@ func (h *BlogHandler) HandleIndex() http.Handler {
 		ctx, span := h.Tracer.Start(r.Context(), "HandleIndex")
 		defer span.End()
 
-		// only allow '/'
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-
+		username := h.GetUserFromSession(r)
 		allPosts := h.Store.GetAll()
 		span.SetAttributes(attribute.Int("posts.count", len(allPosts)))
 
 		blogTitle := h.Title
 
-		components.Home(allPosts, blogTitle).Render(ctx, w)
+		components.Home(allPosts, blogTitle, username).Render(ctx, w)
 	})
 }
 
@@ -132,7 +129,8 @@ func (h *BlogHandler) HandlePost() http.Handler {
 
 		body := templ.Raw(string(htmlBytes))
 		blogTitle := h.Title
+		username := h.GetUserFromSession(r)
 
-		components.BlogPost(blogTitle, body).Render(ctx, w)
+		components.BlogPost(blogTitle, username, body).Render(ctx, w)
 	})
 }

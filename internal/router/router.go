@@ -22,6 +22,7 @@ type RouterDependencies struct {
 	Tracer            trace.Tracer
 	Metrics           *telemetry.Metrics
 	PrometheusHandler http.Handler
+	Session           *middleware.Sessions
 }
 
 func NewRouter(deps RouterDependencies) http.Handler {
@@ -37,10 +38,19 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
 	mux.Handle("GET /assets/", deps.AssetHandler)
 
+	// auth
+	mux.Handle("GET /register", deps.BlogHandler.HandleRegisterPage())
+	mux.Handle("POST /register", deps.BlogHandler.HandleRegister())
+	mux.Handle("GET /login", deps.BlogHandler.HandleLoginPage())
+	mux.Handle("POST /login", deps.BlogHandler.HandleLogin())
+	mux.Handle("POST /logout", deps.BlogHandler.HandleLogout())
+
 	// routes
-	mux.Handle("GET /", deps.BlogHandler.HandleIndex())
+	mux.Handle("GET /{$}", deps.BlogHandler.HandleIndex())
 	mux.Handle("GET /post/", deps.BlogHandler.HandlePost())
 	mux.Handle("GET /metrics", deps.BlogHandler.HandleMetrics())
+
+	mux.Handle("/", deps.BlogHandler.HandleNotFound())
 
 	middlewareStack := []middleware.Middleware{
 		middleware.Recover(deps.Logger),
@@ -54,6 +64,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	middlewareStack = append(middlewareStack,
 		deps.Limiter.Middleware(deps.Logger),
 		deps.GeoStats.Middleware(deps.Logger),
+		deps.Session.Middleware(deps.Logger),
 		middleware.Logger(deps.Logger), // Inner logger (shows simple text logs)
 	)
 
