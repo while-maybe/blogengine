@@ -1,8 +1,16 @@
 # build stage (unchanged)
-FROM golang:1.25 AS builder
+FROM golang:1.25-trixie AS builder
+
 
 # build deps
-RUN apt update && apt install -y make git curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    make \
+    curl \
+    git \
+    gcc \
+    libc6-dev \
+    libwebp-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # templ
 RUN go install github.com/a-h/templ/cmd/templ@latest
@@ -28,15 +36,21 @@ RUN templ generate
 
 RUN ./tailwindcss -i ./static/tailwind.css -o ./static/style.css --minify
 # Create a static binary
-ENV CGO_ENABLED=0
+ENV CGO_ENABLED=1
 RUN go build -ldflags="-s -w" -o ./blogengine ./cmd/blogengine/main.go
 
 
 # run stage - ON ALPINE!
-FROM alpine:latest
+FROM debian:trixie-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libwebp7 \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add non-root user: # -S = system user, -G = add to group
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
 WORKDIR /app
 
@@ -53,7 +67,6 @@ RUN chown -R appuser:appgroup /app
 
 # run as non-root
 USER appuser
-
 EXPOSE 3000
 
 # Healthcheck
