@@ -7,6 +7,8 @@ services:
       - APP_NAME=${APP_NAME:-"give me a name :("}
       - APP_ENV=prod
       - APP_SOURCES_DIR=${APP_SOURCES_DIR:-/app/sources}
+      
+      - SESSION_SECRET=${SESSION_SECRET}
 
       - DB_PATH=${DB_PATH:-/app/data/blogengine.db}
       - DB_MIGRATIONS_PATH=${DB_MIGRATIONS_PATH:-/app/migrations}

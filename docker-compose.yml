@@ -12,6 +12,8 @@ services:
       - APP_ENV=dev
       - APP_SOURCES_DIR=${APP_SOURCES_DIR:-/app/sources}
 
+      - SESSION_SECRET=${SESSION_SECRET}
+
       - DB_PATH=${DB_PATH:-/app/data/blogengine.db}
       - DB_MIGRATIONS_PATH=${DB_MIGRATIONS_PATH:-/app/migrations}
 
