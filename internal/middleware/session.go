@@ -24,6 +24,7 @@ func NewSessionManager(ttl time.Duration, secure bool, db *sql.DB) *Sessions {
 	sm.Cookie.HttpOnly = true
 	sm.Cookie.SameSite = http.SameSiteLaxMode
 	sm.Cookie.Secure = secure
+	sm.Cookie.Persist = true // desired for a blog
 
 	return &Sessions{Manager: sm}
 }

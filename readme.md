@@ -1,8 +1,6 @@
 # High-Performance Go Blog Engine (WIP)
 
-A production-grade, concurrency-safe Markdown blog engine written in Go 1.25. Designed for efficiency, running smoothly on low-power hardware with minimal memory footprint (<5MB idle).
-
-The project focus is the backend (not the responsive web design) at this stage.
+A production-grade, concurrency-safe Markdown blog engine written in Go 1.25. Designed for efficiency, running smoothly on low-power hardware with minimal memory footprint.
 
 **Status:** 🚧 Active Development 🚧
 
@@ -14,6 +12,19 @@ The project focus is the backend (not the responsive web design) at this stage.
 ## Key Features (Implemented)
 
 This project demonstrates Clean Architecture and Systems Programming patterns in Go:
+
+### Hybrid Persistence & State
+
+* **Decoupled Storage Layer:** Uses a storage.Store interface to keep business logic agnostic of the database implementation.
+* **Pure-Go SQLite:** Utilizes modernc.org/sqlite for a CGO-free build, ensuring 100% portability and cross-compilation (AMD64/ARM64) without native toolchains.
+* **Self-Healing Schema:** Implements an auto-migration system using golang-migrate. The binary detects and applies versioned SQL migrations from the migrations/ directory on startup.
+
+### Authentication & Security
+
+* **Secure Session Management:*** Hardened server-side sessions using `alexedwards/scs/v2` with a SQLite persistent store.
+* **Identity Security:** Industry-standard bcrypt password hashing and session fixation protection via RenewToken logic.
+* **"Shield" Middleware Architecture:** A defensive middleware sequence where the IP Rate Limiter sits outside the Session Manager to reject malicious traffic in-memory before it triggers expensive database I/O.
+* **User Enumeration Protection:** Generic error mapping for authentication failures to prevent probing of valid accounts.
 
 ### Performance & Concurrency
 
@@ -29,6 +40,7 @@ This project demonstrates Clean Architecture and Systems Programming patterns in
 * **Metrics:** Prometheus-compatible metrics endpoint tracking Go runtime stats, HTTP latency, and custom business metrics (Active Posts, Geo Stats).
 * **Dashboarding:** Pre-provisioned **Grafana** dashboards via Infrastructure-as-Code (IaC).
 * **Feature Flagging:** Telemetry can be completely disabled via `ENABLE_TELEMETRY=false` for zero-overhead local development.
+* **Strict Fallback Routing:** Leverages Go 1.22 http.ServeMux patterns (/{$}) to implement a global themed 404 fallback.
 
 ### Robustness & Security
 
@@ -48,6 +60,7 @@ This project demonstrates Clean Architecture and Systems Programming patterns in
 ```text
 .
 ├── cmd/blogengine/       # Entry point (Dependency Injection)
+├── migrations/           # Versioned SQL migrations (Users, Sessions)
 ├── internal/
 │   ├── config/           # Configuration & Validation
 │   ├── content/          # Asset Manager, Markdown Renderer, Repository
@@ -123,6 +136,7 @@ The application is configured via environment variables (or a `.env` file - an `
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `COMPOSE_PROJECT_NAME` | Enforces the Docker stack name (Required for GitOps) | `blogengine` |
+| `SESSION_SECRET` | Secret key for signing cookies | `unsecure example` |
 
 ### Application Settings
 
@@ -131,6 +145,8 @@ The application is configured via environment variables (or a `.env` file - an `
 | `APP_NAME` | Name displayed in header/title | `Strange Coding Blog` |
 | `APP_ENV` | Environment mode (`dev` or `prod`) | `prod` |
 | `APP_SOURCES_DIR` | Path to markdown files | `./sources` |
+| `DB_PATH` | Path to the SQLite database file | `blogengine.db`
+| `DB_MIGRATIONS_PATH` | Path to the SQL migrations directory | `./migrations`
 | `ENABLE_TELEMETRY` | Enable OTel Tracing & Metrics | `true` |
 
 ### Observability (If Enabled)
@@ -188,7 +204,9 @@ The application is configured via environment variables (or a `.env` file - an `
 
 ### Coming soon
 
-* In-Memory Full Text Search: Implement a reverse index to search blog posts without an external database (like ElasticSearch).
+* In-Memory Full Text Search: Implement a reverse index to search blog posts without an external database.
+* Comment System: Dynamic threaded comments on posts (leveraging the existing Auth layer).
 * RSS/Atom Feed Generation: Dynamic XML feed generation for content syndication.
-* Image Optimisation Pipeline: Middleware to resize/compress images on-the-fly (caching the results) to serve WebP to modern browsers.
-* SEO Optimisation: Auto-generate sitemap.xml and JSON-LD structured data for better search engine indexing.
+* Image Optimisation Pipeline: Middleware to resize/compress images on-the-fly to serve WebP.
+* SEO Optimisation: Auto-generate sitemap.xml and JSON-LD structured data.
+* CSRF (Cross-Site Request Forgery) protection

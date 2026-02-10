@@ -52,6 +52,10 @@ type TelemetryConfig struct {
 	OtelEndpoint    string
 }
 
+type AuthConfig struct {
+	SessionSecret string
+}
+
 type Config struct {
 	App     AppConfig
 	DB      DBConfig
@@ -60,6 +64,7 @@ type Config struct {
 	Limiter RateLimiterConfig
 	Logger  LoggerConfig
 	Metrics TelemetryConfig
+	Auth    AuthConfig
 }
 
 func DefaultConfig() *Config {
@@ -95,6 +100,9 @@ func DefaultConfig() *Config {
 		},
 		Metrics: TelemetryConfig{
 			OtelEndpoint: "localhost:4318",
+		},
+		Auth: AuthConfig{
+			SessionSecret: "very-secret-key-change-me-in-production",
 		},
 	}
 }
@@ -135,6 +143,9 @@ func LoadWithDefaults() *Config {
 		Metrics: TelemetryConfig{
 			EnableTelemetry: getEnvAsBool("ENABLE_TELEMETRY", false),
 			OtelEndpoint:    getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", defaults.Metrics.OtelEndpoint),
+		},
+		Auth: AuthConfig{
+			SessionSecret: getEnv("SESSION_SECRET", defaults.Auth.SessionSecret),
 		},
 	}
 }
@@ -236,8 +247,15 @@ func (c *Config) Validate() error {
 	if c.Limiter.Burst <= 0 {
 		return fmt.Errorf("LIMITER_BURST must be positive, got %d", c.Limiter.Burst)
 	}
+	if c.App.Environment == "prod" {
+		if c.Auth.SessionSecret == "" {
+			return fmt.Errorf("SESSION_SECRET must not be empty in production")
+		}
+		if c.Auth.SessionSecret == "very-secret-key-change-me-in-production" {
+			return fmt.Errorf("SESSION_SECRET must be changed from default value for production")
+		}
+	}
 	// c.Proxy.TrustedProxy will default to true if not valid
 	// c.Logger.Info will default to Info if not valid
-
 	return nil
 }
