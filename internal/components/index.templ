@@ -19,9 +19,9 @@ templ Home(posts []*content.Post, title, username string) {
 			<ul class="post-list">
 				for _, p := range posts {
 					<li class="post-list-card">
-						<p class="post-list-card-image">
+						<div class="post-list-card-image">
 							{ getFirstRune(p.Author) }						
-						</p>
+						</div>
 
 						<p class="post-list-card-title">
 							<a href={ templ.SafeURL(fmt.Sprintf("/post/%d", p.ID)) }>

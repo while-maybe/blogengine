@@ -12,6 +12,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
@@ -22,7 +23,14 @@ type MarkDownRenderer struct {
 }
 
 func NewMarkDownRenderer(assets MediaService) *MarkDownRenderer {
-	engine := goldmark.New(
+	m := &MarkDownRenderer{assets: assets}
+
+	m.engine = goldmark.New(
+		goldmark.WithRendererOptions(
+			renderer.WithNodeRenderers(
+				util.Prioritized(m, 100),
+			),
+		),
 		goldmark.WithExtensions(
 			extension.Table,
 			extension.Strikethrough,
@@ -40,7 +48,7 @@ func NewMarkDownRenderer(assets MediaService) *MarkDownRenderer {
 			parser.WithASTTransformers(util.Prioritized(&assetTransformer{assets: assets}, 100)),
 		),
 	)
-	return &MarkDownRenderer{assets: assets, engine: engine}
+	return m
 }
 
 func (m *MarkDownRenderer) Render(source []byte) ([]byte, error) {
@@ -103,4 +111,32 @@ func isExternalLink(s string) bool {
 		}
 	}
 	return false
+}
+
+func (m *MarkDownRenderer) renderImage(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if !entering {
+		return ast.WalkContinue, nil
+	}
+	n := node.(*ast.Image)
+	dest := string(n.Destination)
+
+	srcset := fmt.Sprintf("%[1]s_800 800w, %[1]s_1200 1200w, %[1]s_1920 1920w", dest)
+	// TODO check the 1200px width is accurate for desktop screens
+	sizes := "(max-width: 800px) 100vw, (max-width: 1200px) 90vw, 1200px"
+
+	title := string(n.Title)
+	altText := ""
+
+	imgTag := fmt.Sprintf(
+		`<img src="%s-1200" srcset="%s" sizes="%s" alt="%s" title="%s" loading="lazy" class="post-image">`,
+		dest, srcset, sizes, altText, title,
+	)
+
+	_, _ = w.WriteString(imgTag)
+
+	return ast.WalkSkipChildren, nil
+}
+
+func (m *MarkDownRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+	reg.Register(ast.KindImage, m.renderImage)
 }

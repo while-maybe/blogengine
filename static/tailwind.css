@@ -229,6 +229,17 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   }
 
+  .post-image {
+    @apply w-full h-auto rounded-xl my-8 shadow-xl transition-opacity duration-300;
+    @apply border border-brand-edge/30;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  .post-image:hover {
+    transform: scale(1.01);
+  }
+
   /* register page */
   .layout-container-register {
     @apply flex grow items-center justify-center px-4;

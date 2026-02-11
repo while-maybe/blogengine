@@ -15,13 +15,16 @@ type AssetManager struct {
 	mu         sync.RWMutex
 	uuidToPath map[uuid.UUID]string
 	pathToUuid map[string]uuid.UUID
+	namespace  uuid.UUID
 }
 
-func NewAssetManager(store storage.Provider) *AssetManager {
+func NewAssetManager(store storage.Provider, ns uuid.UUID) *AssetManager {
+
 	return &AssetManager{
 		store:      store,
 		uuidToPath: make(map[uuid.UUID]string),
 		pathToUuid: make(map[string]uuid.UUID),
+		namespace:  ns,
 	}
 }
 
@@ -40,10 +43,7 @@ func (am *AssetManager) Obfuscate(path string) (uuid.UUID, error) {
 	}
 	am.mu.RUnlock()
 
-	newUuid, err := uuid.NewV7()
-	if err != nil {
-		return uuid.UUID{}, fmt.Errorf("could not create uuid for path %s: %w", path, err)
-	}
+	newUuid := uuid.NewV5(am.namespace, cleanPath)
 
 	am.mu.Lock()
 	defer am.mu.Unlock()
@@ -73,4 +73,19 @@ func (am *AssetManager) Retrieve(uuid uuid.UUID) (io.ReadCloser, error) {
 	}
 
 	return am.store.Open(storedPath)
+}
+
+func (am *AssetManager) GetRelativePath(uuid uuid.UUID) (string, error) {
+	if uuid.IsNil() {
+		return "", fmt.Errorf("uuid must not be nil")
+	}
+	am.mu.RLock()
+	path, ok := am.uuidToPath[uuid]
+	am.mu.RUnlock()
+
+	if !ok {
+		return "", fmt.Errorf("asset not found")
+	}
+
+	return path, nil
 }

@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gofrs/uuid/v5"
 )
 
 type HTTPTimeoutsConfig struct {
@@ -32,9 +34,10 @@ type LoggerConfig struct {
 }
 
 type AppConfig struct {
-	Name        string
-	Environment string // 'dev' | 'prod'
-	SourcesDir  string
+	Name           string
+	Environment    string // 'dev' | 'prod'
+	SourcesDir     string
+	AssetNamespace string
 }
 
 type DBConfig struct {
@@ -70,9 +73,10 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		App: AppConfig{
-			Name:        "Your blog",
-			Environment: "prod",
-			SourcesDir:  "./sources",
+			Name:           "Your blog",
+			Environment:    "prod",
+			SourcesDir:     "./sources",
+			AssetNamespace: "570e8400-c29b-45d4-a716-446655440700",
 		},
 		DB: DBConfig{
 			Path:           "blogengine.db",
@@ -111,9 +115,10 @@ func LoadWithDefaults() *Config {
 	defaults := DefaultConfig()
 	return &Config{
 		App: AppConfig{
-			Name:        getEnv("APP_NAME", defaults.App.Name),
-			Environment: getEnv("APP_ENV", defaults.App.Environment),
-			SourcesDir:  getEnv("APP_SOURCES_DIR", defaults.App.SourcesDir),
+			Name:           getEnv("APP_NAME", defaults.App.Name),
+			Environment:    getEnv("APP_ENV", defaults.App.Environment),
+			SourcesDir:     getEnv("APP_SOURCES_DIR", defaults.App.SourcesDir),
+			AssetNamespace: getEnv("ASSET_NAMESPACE", defaults.App.AssetNamespace),
 		},
 		DB: DBConfig{
 			Path:           getEnv("DB_PATH", defaults.DB.Path),
@@ -255,6 +260,10 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("SESSION_SECRET must be changed from default value for production")
 		}
 	}
+	if _, err := uuid.FromString(c.App.AssetNamespace); err != nil {
+		return fmt.Errorf("ASSET_NAMESPACE must be a valid UUID")
+	}
+
 	// c.Proxy.TrustedProxy will default to true if not valid
 	// c.Logger.Info will default to Info if not valid
 	return nil

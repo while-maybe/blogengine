@@ -137,6 +137,7 @@ The application is configured via environment variables (or a `.env` file - an `
 | :--- | :--- | :--- |
 | `COMPOSE_PROJECT_NAME` | Enforces the Docker stack name (Required for GitOps) | `blogengine` |
 | `SESSION_SECRET` | Secret key for signing cookies | `unsecure example` |
+| `ASSET_NAMESPACE` | UUID salt used to hash cache file names | `570e8400-c29b-45d4-a716-446655440700` |
 
 ### Application Settings
 

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 	"blogengine/internal/storage"
 	"blogengine/internal/storage/sqlite"
 	"blogengine/internal/telemetry"
+
+	"github.com/gofrs/uuid/v5"
 )
 
 type App struct {
@@ -131,7 +134,9 @@ func main() {
 	}
 
 	storageProvider := storage.NewLocalStorage(cfg.App.SourcesDir)
-	assetManager := content.NewAssetManager(storageProvider)
+
+	ns := uuid.Must(uuid.FromString(cfg.App.AssetNamespace)) // has already been validated in config
+	assetManager := content.NewAssetManager(storageProvider, ns)
 
 	repo, err := content.NewLocalRepository(cfg.App.Name)
 	if err != nil {
@@ -178,7 +183,16 @@ func main() {
 	geo := middleware.NewGeoStats(rootCtx)
 
 	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics, session)
-	assetHandler := &handlers.AssetHandler{Assets: assetManager}
+
+	// cheap cheap vps?
+	numProcs := max(1, runtime.GOMAXPROCS(0)-1)
+	imgProcessor, err := content.NewProcessor(rootCtx, cfg.App.SourcesDir, numProcs, logger)
+	if err != nil {
+		logger.Error("failed to start image processor", "err", err)
+		os.Exit(1)
+	}
+
+	assetHandler := &handlers.AssetHandler{Assets: assetManager, Processor: imgProcessor}
 
 	routerDeps := router.RouterDependencies{
 		Cfg:               cfg,
