@@ -1,12 +1,12 @@
 package components
 
-// import "fmt"
+import "fmt"
 
 templ ErrorPage(c CommonData, statusCode int, statusText, message string) {
     @baseTemplate(c) {
         <main class="flex flex-col grow items-center justify-center w-full px-4 text-center gap-8 my-2">
             <h1 class="my-0 leading-none text-[12rem] font-sans font-black text-brand-edge opacity-50">
-                { statusCode }
+                { fmt.Sprintf("%d", statusCode) }
             </h1>
             
             

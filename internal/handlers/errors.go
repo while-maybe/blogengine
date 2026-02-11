@@ -6,7 +6,7 @@ import (
 )
 
 // InternalError handles 500 errors
-func (h *BlogHandler) InternalError(w http.ResponseWriter, r *http.Request, err string) {
+func (h *BlogHandler) InternalError(w http.ResponseWriter, r *http.Request, err error) {
 	h.Logger.Error("500 internal server error", "err", err, "path", r.URL.Path)
 	h.renderError(w, r, http.StatusInternalServerError,
 		"Internal Server Error",

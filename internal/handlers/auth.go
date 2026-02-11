@@ -53,7 +53,7 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 
 		hashedPwd, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			h.InternalError(w, r, "hashing password")
+			h.InternalError(w, r, err)
 			return
 		}
 
@@ -63,7 +63,7 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 				w.WriteHeader(http.StatusConflict)
 				components.Register(common, "Username already taken.").Render(r.Context(), w)
 			default:
-				h.InternalError(w, r, "creating user")
+				h.InternalError(w, r, err)
 			}
 			return
 		}
@@ -106,7 +106,7 @@ func (h *BlogHandler) HandleLogin() http.Handler {
 				w.WriteHeader(http.StatusUnauthorized)
 				components.Login(common, "Invalid username or password.").Render(r.Context(), w)
 			default:
-				h.InternalError(w, r, "db error on login")
+				h.InternalError(w, r, err)
 			}
 			return
 		}
@@ -118,7 +118,7 @@ func (h *BlogHandler) HandleLogin() http.Handler {
 		}
 
 		if err := h.Sessions.Manager.RenewToken(r.Context()); err != nil {
-			h.InternalError(w, r, "session token renewal")
+			h.InternalError(w, r, err)
 			return
 		}
 
@@ -135,7 +135,7 @@ func (h *BlogHandler) HandleLogout() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// destroy session in db and clear cookie
 		if err := h.Sessions.Manager.Destroy(r.Context()); err != nil {
-			h.InternalError(w, r, "destroy session")
+			h.InternalError(w, r, err)
 			return
 		}
 

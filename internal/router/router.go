@@ -24,6 +24,7 @@ type RouterDependencies struct {
 	PrometheusHandler http.Handler
 	Session           *middleware.Sessions
 	CSRF              *middleware.CSRF
+	CSP               *middleware.CSP
 }
 
 func NewRouter(deps RouterDependencies) http.Handler {
@@ -63,6 +64,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	}
 
 	middlewareStack = append(middlewareStack,
+		deps.CSP.Middleware(),
 		deps.Limiter.Middleware(deps.Logger),
 		deps.GeoStats.Middleware(deps.Logger),
 		deps.Session.Middleware(deps.Logger),

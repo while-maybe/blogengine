@@ -100,7 +100,7 @@ func (h *BlogHandler) HandlePost() http.Handler {
 			case errors.Is(err, content.ErrPostNotFound):
 				h.NotFound(w, r)
 			default:
-				h.InternalError(w, r, "get post ID")
+				h.InternalError(w, r, err)
 				slog.Error("finding post", "id", id64, "err", err)
 			}
 			return
@@ -127,7 +127,7 @@ func (h *BlogHandler) HandlePost() http.Handler {
 			case errors.Is(err, content.ErrFileTooLarge):
 				h.renderError(w, r, http.StatusRequestEntityTooLarge, "413 entity too large", "post too large")
 			default:
-				h.InternalError(w, r, "get post content")
+				h.InternalError(w, r, err)
 			}
 			slog.Error("handling post", "title", post.Title, "err", err)
 			return
