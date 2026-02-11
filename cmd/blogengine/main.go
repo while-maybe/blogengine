@@ -180,6 +180,11 @@ func main() {
 	session := middleware.NewSessionManager(sessionLifetime, cfg.App.Environment == "prod", db.RawDB())
 
 	limiter := middleware.NewIPRateLimiter(rootCtx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
+
+	authRPS := 1
+	authBurst := 3
+	authLimiter := middleware.NewIPRateLimiter(rootCtx, authRPS, authBurst, cfg.Proxy.Trusted)
+
 	geo := middleware.NewGeoStats(rootCtx)
 
 	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics, session)
@@ -203,6 +208,7 @@ func main() {
 		BlogHandler:       blogHandler,
 		AssetHandler:      assetHandler,
 		Limiter:           limiter,
+		AuthLimiter:       authLimiter,
 		GeoStats:          geo,
 		Tracer:            tel.Tracer,
 		Metrics:           metrics,

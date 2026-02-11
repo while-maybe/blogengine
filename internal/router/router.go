@@ -18,6 +18,7 @@ type RouterDependencies struct {
 	BlogHandler       *handlers.BlogHandler
 	AssetHandler      *handlers.AssetHandler
 	Limiter           *middleware.IPRateLimiter
+	AuthLimiter       *middleware.IPRateLimiter
 	GeoStats          *middleware.GeoStats
 	Tracer            trace.Tracer
 	Metrics           *telemetry.Metrics
@@ -40,12 +41,16 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
 	mux.Handle("GET /assets/", deps.AssetHandler)
 
+	authLimiter := func(h http.Handler) http.Handler {
+		return deps.AuthLimiter.Middleware(deps.Logger)(h)
+	}
+
 	// auth
 	mux.Handle("GET /register", deps.BlogHandler.HandleRegisterPage())
-	mux.Handle("POST /register", deps.BlogHandler.HandleRegister())
+	mux.Handle("POST /register", authLimiter(deps.BlogHandler.HandleRegister()))
 	mux.Handle("GET /login", deps.BlogHandler.HandleLoginPage())
-	mux.Handle("POST /login", deps.BlogHandler.HandleLogin())
-	mux.Handle("POST /logout", deps.BlogHandler.HandleLogout())
+	mux.Handle("POST /login", authLimiter(deps.BlogHandler.HandleLogin()))
+	mux.Handle("POST /logout", authLimiter(deps.BlogHandler.HandleLogout()))
 
 	// routes
 	mux.Handle("GET /{$}", deps.BlogHandler.HandleIndex())
