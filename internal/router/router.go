@@ -51,7 +51,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	mux.Handle("GET /post/", deps.BlogHandler.HandlePost())
 	mux.Handle("GET /metrics", deps.BlogHandler.HandleMetrics())
 
-	mux.Handle("/", deps.BlogHandler.HandleNotFound())
+	mux.HandleFunc("/", deps.BlogHandler.NotFound)
 
 	middlewareStack := []middleware.Middleware{
 		middleware.Recover(deps.Logger),

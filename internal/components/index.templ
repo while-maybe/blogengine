@@ -13,8 +13,8 @@ func getFirstRune(s string) string {
     return "?"
 }
 
-templ Home(posts []*content.Post, title, username string) {
-    @baseTemplate(title, username) {
+templ Home(posts []*content.Post, c CommonData) {
+    @baseTemplate(c) {
 		<main class="main-content">
 			<ul class="post-list">
 				for _, p := range posts {

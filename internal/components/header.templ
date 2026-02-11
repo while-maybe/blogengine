@@ -1,17 +1,18 @@
 package components
 
-templ headerTemplate(title, username string) {
+templ headerTemplate(c CommonData) {
   <header class="top-banner" id="main-header">
     <div class="banner-content">
         <h1>
-          <a href="/" class="brand text-2xl lg:text-4xl">{title}</a>
+          <a href="/" class="brand text-2xl lg:text-4xl">{c.Title}</a>
         </h1>
 
         <nav class="flex items-center gap-x-4">
-        if username != "" {
+        if c.Username != "" {
                 <div class="flex items-center gap-x-4">
-                    <span class="text-text-muted text-sm hidden md:block">Welcome, <b class="text-text-main">{ username }</b></span>
+                    <span class="text-text-muted text-sm hidden md:block">Welcome, <b class="text-text-main">{ c.Username }</b></span>
                     <form action="/logout" method="POST" class="inline">
+                        <input type="hidden" name="csrf_token" value={ c.CSRFToken } />
                         <button type="submit" class="text-sm font-semibold text-accent hover:underline cursor-pointer bg-transparent border-none p-0">
                             Logout
                         </button>

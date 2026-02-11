@@ -1,0 +1,29 @@
+package components
+
+// import "fmt"
+
+templ ErrorPage(c CommonData, statusCode int, statusText, message string) {
+    @baseTemplate(c) {
+        <main class="flex flex-col grow items-center justify-center w-full px-4 text-center gap-8 my-2">
+            <h1 class="my-0 leading-none text-[12rem] font-sans font-black text-brand-edge opacity-50">
+                { statusCode }
+            </h1>
+            
+            
+            <h2 class="my-0 text-4xl font-serif">{ statusText }</h2>
+
+            <p class="text-text-muted max-w-md mx-auto">{ message }</p>
+
+            <div class="mt-8 flex gap-4 justify-center">
+                <a href="/" class="inline-block px-6 py-3  bg-brand-edge text-text-main font-bold rounded-lg transition-transform hover:scale-105 active:scale-95">
+                    Go Home
+                </a>
+                if statusCode == 401 {
+                    <a href="/login" class="px-6 py-3 bg-accent text-brand-dark font-bold rounded-lg transition-transform hover:scale-105">
+                        Login
+                    </a>
+                }
+            </div>
+        </main>
+    }
+}

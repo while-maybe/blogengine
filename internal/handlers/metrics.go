@@ -18,7 +18,6 @@ func (h *BlogHandler) HandleMetrics() http.Handler {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-		// -------------------------
 
 		var m runtime.MemStats
 		// force Go to read the current memory state

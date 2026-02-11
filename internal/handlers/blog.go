@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/justinas/nosurf"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -51,33 +52,40 @@ func NewBlogHandler(store content.PostService, db storage.Store, renderer *conte
 	}
 }
 
+func (h *BlogHandler) newCommonData(r *http.Request) components.CommonData {
+	return components.CommonData{
+		Title:     h.Title,
+		Username:  h.GetUserFromSession(r),
+		CSRFToken: nosurf.Token(r),
+	}
+}
+
 func (h *BlogHandler) HandleIndex() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := h.Tracer.Start(r.Context(), "HandleIndex")
 		defer span.End()
+		common := h.newCommonData(r)
 
-		username := h.GetUserFromSession(r)
 		allPosts := h.Store.GetAll()
 		span.SetAttributes(attribute.Int("posts.count", len(allPosts)))
 
-		blogTitle := h.Title
-
-		components.Home(allPosts, blogTitle, username).Render(ctx, w)
+		components.Home(allPosts, common).Render(ctx, w)
 	})
 }
 
 func (h *BlogHandler) HandlePost() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		ctx, span := h.Tracer.Start(r.Context(), "HandlePost")
 		defer span.End()
+
+		common := h.newCommonData(r)
 
 		idStr := strings.TrimPrefix(r.URL.Path, "/post/")
 		span.SetAttributes(attribute.String("post.id_str", idStr))
 
 		id64, err := strconv.ParseUint(idStr, 10, 32)
 		if err != nil {
-			http.NotFound(w, r)
+			h.NotFound(w, r)
 			slog.Error("parsing file id", "idStr", idStr, "err", err)
 			return
 		}
@@ -90,9 +98,9 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		if err != nil {
 			switch {
 			case errors.Is(err, content.ErrPostNotFound):
-				http.NotFound(w, r)
+				h.NotFound(w, r)
 			default:
-				http.Error(w, "internal server error", http.StatusInternalServerError)
+				h.InternalError(w, r, "get post ID")
 				slog.Error("finding post", "id", id64, "err", err)
 			}
 			return
@@ -117,9 +125,9 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		if err != nil {
 			switch {
 			case errors.Is(err, content.ErrFileTooLarge):
-				http.Error(w, "post too large", http.StatusRequestEntityTooLarge)
+				h.renderError(w, r, http.StatusRequestEntityTooLarge, "413 entity too large", "post too large")
 			default:
-				http.Error(w, "internal server error", http.StatusInternalServerError)
+				h.InternalError(w, r, "get post content")
 			}
 			slog.Error("handling post", "title", post.Title, "err", err)
 			return
@@ -128,9 +136,7 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		span.SetAttributes(attribute.Int("post.content_bytes", len(htmlBytes)))
 
 		body := templ.Raw(string(htmlBytes))
-		blogTitle := h.Title
-		username := h.GetUserFromSession(r)
 
-		components.BlogPost(blogTitle, username, body).Render(ctx, w)
+		components.BlogPost(common, body).Render(ctx, w)
 	})
 }

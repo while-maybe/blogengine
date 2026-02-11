@@ -2,12 +2,12 @@ package components
 
 import "time"
 
-templ footerTemplate(title string) {
+templ footerTemplate(c CommonData) {
     {{year := time.Now().Year()}}
 
     <footer class="footer-banner">
         <div class="footer-content">
-            {title} ©{year}
+            {c.Title} ©{year}
         </div>
     </footer>
 }

@@ -1,7 +1,7 @@
 package components
 
-templ BlogPost(title, username string, content templ.Component){
-    @baseTemplate(title, username) {
+templ BlogPost(c CommonData, content templ.Component){
+    @baseTemplate(c) {
 
     <div class="layout-container">
 
