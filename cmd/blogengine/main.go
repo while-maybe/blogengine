@@ -194,6 +194,8 @@ func main() {
 
 	assetHandler := &handlers.AssetHandler{Assets: assetManager, Processor: imgProcessor}
 
+	csrf := middleware.NewCSRF(cfg.App.Environment == "prod")
+
 	routerDeps := router.RouterDependencies{
 		Cfg:               cfg,
 		Logger:            logger,
@@ -205,6 +207,7 @@ func main() {
 		Metrics:           metrics,
 		PrometheusHandler: tel.PrometheusHandler,
 		Session:           session,
+		CSRF:              csrf,
 	}
 
 	router := router.NewRouter(routerDeps)

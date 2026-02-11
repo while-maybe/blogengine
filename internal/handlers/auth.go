@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/justinas/nosurf"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,7 +19,9 @@ func (h *BlogHandler) HandleRegisterPage() http.Handler {
 			return
 		}
 
-		components.Register(h.Title, "", "").Render(r.Context(), w)
+		token := nosurf.Token(r)
+
+		components.Register(h.Title, "", "", token).Render(r.Context(), w)
 	})
 }
 
@@ -36,15 +39,17 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 		password := r.FormValue("password")
 		confirm := r.FormValue("confirm_password")
 
+		token := nosurf.Token(r)
+
 		if password != confirm {
 			w.WriteHeader(http.StatusBadRequest)
-			components.Register(h.Title, username, "Passwords do not match.").Render(r.Context(), w)
+			components.Register(h.Title, username, "Passwords do not match.", token).Render(r.Context(), w)
 			return
 		}
 
 		if len(username) < 3 || len(password) < 8 {
 			w.WriteHeader(http.StatusBadRequest)
-			components.Register(h.Title, "", "Inputs too short.").Render(r.Context(), w)
+			components.Register(h.Title, "", "Inputs too short.", token).Render(r.Context(), w)
 			return
 		}
 
@@ -59,7 +64,7 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 			switch {
 			case errors.Is(err, storage.ErrUniqueViolation):
 				w.WriteHeader(http.StatusConflict)
-				components.Register(h.Title, "", "Username already taken.").Render(r.Context(), w)
+				components.Register(h.Title, "", "Username already taken.", token).Render(r.Context(), w)
 			default:
 				h.Logger.Error("creating user", "err", err)
 				http.Error(w, "internal error", http.StatusInternalServerError)
@@ -79,7 +84,9 @@ func (h *BlogHandler) HandleLoginPage() http.Handler {
 			return
 		}
 
-		components.Login(h.Title, "", "").Render(r.Context(), w)
+		token := nosurf.Token(r)
+
+		components.Login(h.Title, "", "", token).Render(r.Context(), w)
 	})
 }
 
@@ -97,12 +104,14 @@ func (h *BlogHandler) HandleLogin() http.Handler {
 
 		password := r.FormValue("password")
 
+		token := nosurf.Token(r)
+
 		user, err := h.DB.GetUserByUsername(r.Context(), username)
 		if err != nil {
 			switch {
 			case errors.Is(err, storage.ErrNotFound):
 				w.WriteHeader(http.StatusUnauthorized)
-				components.Login(h.Title, "", "Invalid username or password.").Render(r.Context(), w)
+				components.Login(h.Title, "", "Invalid username or password.", token).Render(r.Context(), w)
 			default:
 				h.Logger.Error("db error on login", "err", err)
 				http.Error(w, "internal error", http.StatusInternalServerError)
@@ -112,7 +121,7 @@ func (h *BlogHandler) HandleLogin() http.Handler {
 
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
-			components.Login(h.Title, "", "Invalid username or password.").Render(r.Context(), w)
+			components.Login(h.Title, "", "Invalid username or password.", token).Render(r.Context(), w)
 			return
 		}
 

@@ -1,6 +1,6 @@
 package components
 
-templ Register(title, username, errorMessage string) {
+templ Register(title, username, errorMessage, csrfToken string) {
     @baseTemplate(title, "") {
          <main class="layout-container-register">
             <div class="auth-card">
@@ -11,6 +11,7 @@ templ Register(title, username, errorMessage string) {
                 }
 
                 <form action="/register" method="POST">
+                 <input type="hidden" name="csrf_token" value={ csrfToken } />
                     <div class="form-group">
                         <label for="username" class="form-label">Username</label>
                         <input type="text" id="username" name="username" class="form-input" placeholder="Enter username" required minlength="3" />

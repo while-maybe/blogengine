@@ -23,6 +23,7 @@ type RouterDependencies struct {
 	Metrics           *telemetry.Metrics
 	PrometheusHandler http.Handler
 	Session           *middleware.Sessions
+	CSRF              *middleware.CSRF
 }
 
 func NewRouter(deps RouterDependencies) http.Handler {
@@ -65,6 +66,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 		deps.Limiter.Middleware(deps.Logger),
 		deps.GeoStats.Middleware(deps.Logger),
 		deps.Session.Middleware(deps.Logger),
+		deps.CSRF.Middleware(deps.Logger),
 		middleware.Logger(deps.Logger), // Inner logger (shows simple text logs)
 	)
 
