@@ -1,5 +1,5 @@
 # build stage (unchanged)
-FROM golang:1.25-trixie AS builder
+FROM golang:1.26-trixie AS builder
 
 
 # build deps
