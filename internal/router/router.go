@@ -7,6 +7,7 @@ import (
 	"blogengine/internal/telemetry"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -41,16 +42,19 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
 	mux.Handle("GET /assets/", deps.AssetHandler)
 
-	authLimiter := func(h http.Handler) http.Handler {
-		return deps.AuthLimiter.Middleware(deps.Logger)(h)
+	authDelay := 500 * time.Millisecond
+	authStack := func(h http.Handler) http.Handler {
+		h = middleware.SecureDelay(authDelay, deps.Metrics)(h)
+		h = deps.AuthLimiter.Middleware(deps.Logger)(h)
+		return h
 	}
 
 	// auth
 	mux.Handle("GET /register", deps.BlogHandler.HandleRegisterPage())
-	mux.Handle("POST /register", authLimiter(deps.BlogHandler.HandleRegister()))
+	mux.Handle("POST /register", authStack(deps.BlogHandler.HandleRegister()))
 	mux.Handle("GET /login", deps.BlogHandler.HandleLoginPage())
-	mux.Handle("POST /login", authLimiter(deps.BlogHandler.HandleLogin()))
-	mux.Handle("POST /logout", authLimiter(deps.BlogHandler.HandleLogout()))
+	mux.Handle("POST /login", authStack(deps.BlogHandler.HandleLogin()))
+	mux.Handle("POST /logout", authStack(deps.BlogHandler.HandleLogout()))
 
 	// routes
 	mux.Handle("GET /{$}", deps.BlogHandler.HandleIndex())

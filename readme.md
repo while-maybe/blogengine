@@ -19,6 +19,17 @@ This project demonstrates Clean Architecture and Systems Programming patterns in
 * **Pure-Go SQLite:** Utilizes modernc.org/sqlite for a CGO-free build, ensuring 100% portability and cross-compilation (AMD64/ARM64) without native toolchains.
 * **Self-Healing Schema:** Implements an auto-migration system using golang-migrate. The binary detects and applies versioned SQL migrations from the migrations/ directory on startup.
 
+### Security & Hardening (new)
+
+This project implements a multi-layered security model to protect both the server resources and user data:
+
+* **CSRF Protection:** Integrated `justinas/nosurf` middleware to defend against Cross-Site Request Forgery. Every state-changing form (Login, Register, Logout) is shielded with a unique, session-backed cryptographic token.
+* **Content Security Policy (CSP):** A custom, declarative middleware enforces strict browser-level security. It whitelists trusted sources for fonts and images while disabling dangerous defaults, mitigating XSS and data injection attacks.
+* **Anti-Timing Attack Layer:** Implemented a SecureDelay middleware for all authentication endpoints with `time.NewTimer` and context-aware `select` blocks to ensure constant-time responses (500ms), making "User Found" vs "User Not Found" states indistinguishable to automated probing tools.
+* **Tiered Rate Limiting:** Implemented a "Shield" architecture using dual-instance token buckets. A global limiter (20 RPS) protects the overall infrastructure, while a high-sensitivity Auth Limiter (1 RPS) specifically throttles brute-force attempts on sensitive endpoints.
+* **Configurable Bot Mitigation:** Added a shared-secret Invite Code system for registration. This feature is environment-aware: it can be toggled on or off via configuration without changing the codebase, providing a light pragmatic alternative to heavy third-party CAPTCHA scripts.
+* **Themed Error Resilience:** Replaced standard "white-page" errors with a unified, themed error system. Whether a user hits a 401 (Unauthorised), 404 (Not Found), or 500 (Internal Error), they receive a consistent UI experience with big-font status watermarks and helpful navigation links.
+
 ### Authentication & Security
 
 * **Secure Session Management:*** Hardened server-side sessions using `alexedwards/scs/v2` with a SQLite persistent store.
@@ -157,7 +168,7 @@ The application is configured via environment variables (or a `.env` file - an `
 | :--- | :--- | :--- |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Jaeger/Collector Address | `localhost:4318` |
 | `GRAFANA_PASSWORD` | Admin password for Grafana | `admin` |
-| `GF_SECURITY_ADMIN_USER ` | Admin username | `admin` |
+| `GF_SECURITY_ADMIN_USER` | Admin username | `admin` |
 
 ### Frontend Architecture
 

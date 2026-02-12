@@ -38,9 +38,6 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 			inviteCode := r.FormValue("invite_code")
 			inviteCode = strings.TrimSpace(inviteCode)
 
-			// TODO remove dev code
-			// altCode := fmt.Sprintf("UNITY%02d!", time.Now().Minute())
-			// isValid := strings.EqualFold(inviteCode, h.InviteCode) || strings.EqualFold(inviteCode, altCode)
 			isValid := strings.EqualFold(inviteCode, h.InviteCode)
 
 			if !isValid {

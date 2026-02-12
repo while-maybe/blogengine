@@ -22,6 +22,8 @@ type Metrics struct {
 	RateLimitHitsTotal metric.Int64Counter
 	// assets
 	AssetRequestsTotal metric.Int64Counter
+	// middlewares
+	AuthWorkDuration metric.Float64Histogram
 }
 
 func NewMetrics(meter metric.Meter) (*Metrics, error) {
@@ -106,6 +108,12 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		return nil, fmt.Errorf("failed to create asset_requests_total: %w", err)
 	}
 
+	authWorkDuration, err := meter.Float64Histogram(
+		"auth_work_duration",
+		metric.WithDescription("real time spent on DB/Bcrypt"),
+		metric.WithUnit("s"),
+	)
+
 	return &Metrics{
 		HTTPRequestsTotal:   httpRequestsTotal,
 		HTTPRequestDuration: httpRequestDuration,
@@ -116,6 +124,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		CacheMissesTotal:    cacheMissesTotal,
 		RateLimitHitsTotal:  rateLimitHitsTotal,
 		AssetRequestsTotal:  assetRequestsTotal,
+		AuthWorkDuration:    authWorkDuration,
 	}, nil
 }
 
