@@ -113,6 +113,9 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		metric.WithDescription("real time spent on DB/Bcrypt"),
 		metric.WithUnit("s"),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create auth_work_duration: %w", err)
+	}
 
 	return &Metrics{
 		HTTPRequestsTotal:   httpRequestsTotal,
