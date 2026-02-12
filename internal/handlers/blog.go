@@ -26,32 +26,37 @@ type PostProvider interface {
 
 // BlogHandler holds the state
 type BlogHandler struct {
-	Title    string
-	Store    content.PostService
-	DB       storage.Store
-	Renderer *content.MarkDownRenderer
-	Logger   *slog.Logger
-	GeoStats *middleware.GeoStats
-	Tracer   trace.Tracer
-	Metrics  *telemetry.Metrics
-	Sessions *middleware.Sessions
+	Title       string
+	NeedsInvite bool
+	InviteCode  string
+	Store       content.PostService
+	DB          storage.Store
+	Renderer    *content.MarkDownRenderer
+	Logger      *slog.Logger
+	GeoStats    *middleware.GeoStats
+	Tracer      trace.Tracer
+	Metrics     *telemetry.Metrics
+	Sessions    *middleware.Sessions
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store content.PostService, db storage.Store, renderer *content.MarkDownRenderer, title string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics, sm *middleware.Sessions) *BlogHandler {
+func NewBlogHandler(store content.PostService, db storage.Store, renderer *content.MarkDownRenderer, title string, needsInvite bool, inviteCode string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics, sm *middleware.Sessions) *BlogHandler {
 	return &BlogHandler{
-		Store:    store,
-		DB:       db,
-		Renderer: renderer,
-		Title:    title,
-		Logger:   logger,
-		GeoStats: geo,
-		Tracer:   tracer,
-		Metrics:  metrics,
-		Sessions: sm,
+		Store:       store,
+		DB:          db,
+		Renderer:    renderer,
+		Title:       title,
+		NeedsInvite: needsInvite,
+		InviteCode:  inviteCode,
+		Logger:      logger,
+		GeoStats:    geo,
+		Tracer:      tracer,
+		Metrics:     metrics,
+		Sessions:    sm,
 	}
 }
 
+// newCommonData is needed to prevent circular imports
 func (h *BlogHandler) newCommonData(r *http.Request) components.CommonData {
 	return components.CommonData{
 		Title:     h.Title,

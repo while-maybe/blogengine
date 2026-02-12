@@ -19,7 +19,8 @@ func (h *BlogHandler) HandleRegisterPage() http.Handler {
 		}
 
 		common := h.newCommonData(r)
-		components.Register(common, "").Render(r.Context(), w)
+
+		components.Register(common, "", h.NeedsInvite).Render(r.Context(), w)
 	})
 }
 
@@ -33,6 +34,22 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 
 		common := h.newCommonData(r)
 
+		if h.NeedsInvite {
+			inviteCode := r.FormValue("invite_code")
+			inviteCode = strings.TrimSpace(inviteCode)
+
+			// TODO remove dev code
+			// altCode := fmt.Sprintf("UNITY%02d!", time.Now().Minute())
+			// isValid := strings.EqualFold(inviteCode, h.InviteCode) || strings.EqualFold(inviteCode, altCode)
+			isValid := strings.EqualFold(inviteCode, h.InviteCode)
+
+			if !isValid {
+				w.WriteHeader(http.StatusUnauthorized)
+				components.Register(common, "Invalid invite code.", h.NeedsInvite).Render(r.Context(), w)
+				return
+			}
+		}
+
 		username := r.FormValue("username")
 		username = strings.TrimSpace(username)
 
@@ -41,13 +58,13 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 
 		if password != confirm {
 			w.WriteHeader(http.StatusBadRequest)
-			components.Register(common, "Passwords do not match.").Render(r.Context(), w)
+			components.Register(common, "Passwords do not match.", h.NeedsInvite).Render(r.Context(), w)
 			return
 		}
 
 		if len(username) < 3 || len(password) < 8 {
 			w.WriteHeader(http.StatusBadRequest)
-			components.Register(common, "Inputs too short.").Render(r.Context(), w)
+			components.Register(common, "Inputs too short.", h.NeedsInvite).Render(r.Context(), w)
 			return
 		}
 
@@ -61,7 +78,7 @@ func (h *BlogHandler) HandleRegister() http.Handler {
 			switch {
 			case errors.Is(err, storage.ErrUniqueViolation):
 				w.WriteHeader(http.StatusConflict)
-				components.Register(common, "Username already taken.").Render(r.Context(), w)
+				components.Register(common, "Username already taken.", h.NeedsInvite).Render(r.Context(), w)
 			default:
 				h.InternalError(w, r, err)
 			}

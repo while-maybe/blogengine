@@ -1,6 +1,6 @@
 package components
 
-templ Register(c CommonData, errorMessage string) {
+templ Register(c CommonData, errorMessage string, needInvite bool) {
     @baseTemplate(c) {
          <main class="layout-container-register">
             <div class="auth-card">
@@ -26,6 +26,13 @@ templ Register(c CommonData, errorMessage string) {
                         <label for="confirm_password" class="form-label">Confirm Password</label>
                         <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="••••••••" required autocomplete="new-password"/>
                     </div>
+                    
+                    if needInvite {
+                        <div class="form-group">
+                            <label for="invite_code" class="form-label">Invite Code</label>
+                            <input type="password" id="invite_code" name="invite_code" class="form-input" placeholder="invite code" required />
+                        </div>
+                    }
 
                     <button type="submit" class="btn-primary mt-4">
                         Register

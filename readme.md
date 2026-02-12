@@ -145,9 +145,10 @@ The application is configured via environment variables (or a `.env` file - an `
 | :--- | :--- | :--- |
 | `APP_NAME` | Name displayed in header/title | `Strange Coding Blog` |
 | `APP_ENV` | Environment mode (`dev` or `prod`) | `prod` |
+| `INVITE_CODE` | New user registration code | `` |
 | `APP_SOURCES_DIR` | Path to markdown files | `./sources` |
-| `DB_PATH` | Path to the SQLite database file | `blogengine.db`
-| `DB_MIGRATIONS_PATH` | Path to the SQL migrations directory | `./migrations`
+| `DB_PATH` | Path to the SQLite database file | `blogengine.db` |
+| `DB_MIGRATIONS_PATH` | Path to the SQL migrations directory | `./migrations` |
 | `ENABLE_TELEMETRY` | Enable OTel Tracing & Metrics | `true` |
 
 ### Observability (If Enabled)

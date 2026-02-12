@@ -57,6 +57,7 @@ type TelemetryConfig struct {
 
 type AuthConfig struct {
 	SessionSecret string
+	InviteCode    string
 }
 
 type Config struct {
@@ -107,6 +108,7 @@ func DefaultConfig() *Config {
 		},
 		Auth: AuthConfig{
 			SessionSecret: "very-secret-key-change-me-in-production",
+			InviteCode:    "",
 		},
 	}
 }
@@ -151,6 +153,7 @@ func LoadWithDefaults() *Config {
 		},
 		Auth: AuthConfig{
 			SessionSecret: getEnv("SESSION_SECRET", defaults.Auth.SessionSecret),
+			InviteCode:    getEnv("INVITE_CODE", defaults.Auth.InviteCode),
 		},
 	}
 }
@@ -262,6 +265,9 @@ func (c *Config) Validate() error {
 	}
 	if _, err := uuid.FromString(c.App.AssetNamespace); err != nil {
 		return fmt.Errorf("ASSET_NAMESPACE must be a valid UUID")
+	}
+	if len(c.Auth.InviteCode) > 50 {
+		return fmt.Errorf("INVITE_CODE is too long (max 25 ascii chars/bytes)")
 	}
 
 	// c.Proxy.TrustedProxy will default to true if not valid

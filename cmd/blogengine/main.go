@@ -187,7 +187,9 @@ func main() {
 
 	geo := middleware.NewGeoStats(rootCtx)
 
-	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, logger, geo, tel.Tracer, metrics, session)
+	needsInvite := cfg.Auth.InviteCode != ""
+
+	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, needsInvite, cfg.Auth.SessionSecret, logger, geo, tel.Tracer, metrics, session)
 
 	// cheap cheap vps?
 	numProcs := max(1, runtime.GOMAXPROCS(0)-1)
