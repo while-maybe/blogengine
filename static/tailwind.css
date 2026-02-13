@@ -239,6 +239,10 @@
     .post-list-card-action:hover {
         @apply bg-accent/10;
     }
+
+    .post-list-card-action:hover svg {
+    filter: drop-shadow(0 0 8px var(--color-accent));
+}
 }
   
   .copy-btn {
