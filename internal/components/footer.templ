@@ -1,13 +1,37 @@
 package components
 
-import "time"
+import (
+    "time"
+    "fmt"
+)
+
+// templ footerTemplate(c CommonData) {
+//     {{year := time.Now().Year()}}
+
+//     <footer class="footer-banner">
+//         <div class="footer-content">
+//             {c.Title} ©{year}
+//         </div>
+//     </footer>
+// }
 
 templ footerTemplate(c CommonData) {
-    {{year := time.Now().Year()}}
+    {{ year := time.Now().Year() }}
+    <footer class="w-full pt-6 border-t border-brand-edge/20 mt-auto pb-1">
+        <div class="max-w-4xl mx-auto px-4 flex flex-col items-center gap-y-1.5">
+            
+            // Row 1: The Boring Stuff (Small, muted, spaced out)
+            <nav class="flex gap-x-6 text-[10px] uppercase tracking-[0.2em] text-text-muted font-semibold">
+                <a href="/about" class="hover:text-accent transition-colors">About</a>
+                <a href="/privacy" class="hover:text-accent transition-colors">Privacy</a>
+                <a href="/terms" class="hover:text-accent transition-colors">Terms</a>
+                <a href="/contact" class="hover:text-accent transition-colors">Contact</a>
+            </nav>
 
-    <footer class="footer-banner">
-        <div class="footer-content">
-            {c.Title} ©{year}
+            
+            <p class="text-sm text-text-muted/80 font-serif">
+                { c.Title } ©{ fmt.Sprintf("%d", year) } — Engineered for performance.
+            </p>
         </div>
     </footer>
 }

@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/justinas/nosurf"
@@ -83,9 +82,7 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		ctx, span := h.Tracer.Start(r.Context(), "HandlePost")
 		defer span.End()
 
-		common := h.newCommonData(r)
-
-		idStr := strings.TrimPrefix(r.URL.Path, "/post/")
+		idStr := r.PathValue("id")
 		span.SetAttributes(attribute.String("post.id_str", idStr))
 
 		id64, err := strconv.ParseUint(idStr, 10, 32)
@@ -142,6 +139,14 @@ func (h *BlogHandler) HandlePost() http.Handler {
 
 		body := templ.Raw(string(htmlBytes))
 
-		components.BlogPost(common, body).Render(ctx, w)
+		comments, err := h.DB.GetCommentsForPost(ctx, int64(postID), 0, 100)
+		if err != nil {
+			h.Logger.Error("failed to fetch comments", "post_id", postID, "err", err)
+			comments = []*storage.Comment{}
+		}
+
+		common := h.newCommonData(r)
+
+		components.BlogPost(common, post.ID, body, comments).Render(ctx, w)
 	})
 }

@@ -98,8 +98,7 @@ func (s *Store) UpdateComment(ctx context.Context, commentID, userID int64, cont
 
 func (s *Store) DeleteComment(ctx context.Context, commentID, userID int64) error {
 	query := `UPDATE comments SET deleted_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND user_id = ? AND deleted_at IS NULL
-		LIMIT 1`
+		WHERE id = ? AND user_id = ? AND deleted_at IS NULL`
 
 	result, err := s.db.ExecContext(ctx, query, commentID, userID)
 

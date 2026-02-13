@@ -1,0 +1,37 @@
+// smart scroll banner
+let lastScrollY = window.scrollY;
+const header = document.getElementById("main-header");
+if (header) {
+    window.addEventListener("scroll", () => {
+        if (window.scrollY > lastScrollY && window.scrollY > 100) {
+            header.classList.add("hidden");
+        } else {
+            header.classList.remove("hidden");
+        }
+        lastScrollY = window.scrollY;
+    });
+}
+
+// copy button logic
+document.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.title = 'Copy to clipboard';
+    
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>';
+    
+    btn.addEventListener('click', () => {
+        const code = pre.querySelector('code');
+        if (!code) return;
+        
+        navigator.clipboard.writeText(code.innerText).then(() => {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z"/></svg>';
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+            }, 2000);
+        });
+    });
+
+    pre.prepend(btn);
+});

@@ -34,6 +34,5 @@ func (s *Sessions) Middleware(logger *slog.Logger) Middleware {
 
 		logger.Info("session manager", "id", s.Manager.Cookie.Name)
 		return s.Manager.LoadAndSave(next)
-
 	}
 }

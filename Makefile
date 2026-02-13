@@ -166,3 +166,7 @@ db/migrations/test:
 	@echo "Re-applying UP migrations passed"
 	@rm -f test.db
 	@echo "All migration tests passed!"
+
+.PHONY: killstale
+killstale:
+	@lsof -ti:3000 | xargs kill -9

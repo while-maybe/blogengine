@@ -40,7 +40,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	// static files
 	fs := http.FileServer(http.Dir("static"))
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
-	mux.Handle("GET /assets/", deps.AssetHandler)
+	mux.Handle("GET /assets/{key}", deps.AssetHandler)
 
 	authDelay := 500 * time.Millisecond
 	authStack := func(h http.Handler) http.Handler {
@@ -55,10 +55,12 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	mux.Handle("GET /login", deps.BlogHandler.HandleLoginPage())
 	mux.Handle("POST /login", authStack(deps.BlogHandler.HandleLogin()))
 	mux.Handle("POST /logout", authStack(deps.BlogHandler.HandleLogout()))
+	mux.Handle("POST /post/{id}/comment", authStack(deps.BlogHandler.HandleComment()))
+	mux.Handle("POST /post/{id}/comment/{commentID}/delete", authStack(deps.BlogHandler.HandleDeleteComment()))
 
 	// routes
 	mux.Handle("GET /{$}", deps.BlogHandler.HandleIndex())
-	mux.Handle("GET /post/", deps.BlogHandler.HandlePost())
+	mux.Handle("GET /post/{id}", deps.BlogHandler.HandlePost())
 	mux.Handle("GET /metrics", deps.BlogHandler.HandleMetrics())
 
 	mux.HandleFunc("/", deps.BlogHandler.NotFound)

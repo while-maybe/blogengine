@@ -23,9 +23,9 @@ type AssetHandler struct {
 const cacheForAYear = 31536000
 
 func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// expected format: /assets/<uuid>-<width>
-	path := strings.TrimPrefix(r.URL.Path, "/assets/")
-	parts := strings.Split(path, "_")
+	// expected format: /assets/{key} where key = <uuid>_<width>
+	key := r.PathValue("key")
+	parts := strings.Split(key, "_")
 
 	if len(parts) != 2 {
 		http.NotFound(w, r)
@@ -53,7 +53,7 @@ func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cachePath := filepath.Join("data", "cache", path+".webp")
+	cachePath := filepath.Join("data", "cache", key+".webp")
 
 	// webp already exists
 	if _, err := os.Stat(cachePath); err == nil {

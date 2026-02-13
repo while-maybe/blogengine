@@ -1,0 +1,25 @@
+package components
+
+import (
+    "fmt"
+	"blogengine/internal/storage"
+)
+
+templ CommentCard(c CommonData, comment *storage.Comment) {
+
+    <div class="bg-brand-card p-3 rounded-xl border border-brand-edge shadow-sm">
+        <div class="flex justify-between items-center mb-1">
+            <span class="font-bold text-accent">{ comment.AuthorName }</span>
+            <span class="text-xs text-text-muted italic">{ comment.CreatedAt.Format("02 Jan 2006, 15:04") }</span>
+        </div>
+
+        <p class="text-text-main text-sm leading-relaxed whitespace-pre-wrap">{ comment.Content }</p>
+
+        if c.Username == comment.AuthorName {
+            <form action={ templ.SafeURL(fmt.Sprintf("/post/%d/comment/%d/delete", comment.PostID, comment.ID)) } method="POST">
+                <input type="hidden" name="csrf_token" value={ c.CSRFToken } />
+                <button type="submit" class="btn-danger-soft text-sm font-semibold cursor-pointer">Delete</button>
+            </form>
+        }
+    </div>
+}
