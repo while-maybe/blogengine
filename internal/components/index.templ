@@ -40,6 +40,12 @@ templ Home(posts []*content.Post, c CommonData) {
 						<p class="post-list-card-meta">
 							{ p.ModifiedAt.Format("02-01-2006") }
 						</p>
+
+						<a href={ templ.SafeURL(fmt.Sprintf("/post/%d", p.ID)) } class="post-list-card-action group" title="Read post">
+							<svg class="w-6 h-6 text-accent transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+							</svg>
+            			</a>
 					</li>
 				}
 			</ul>

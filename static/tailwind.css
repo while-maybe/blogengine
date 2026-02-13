@@ -19,8 +19,8 @@
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   
   /* Layout */
-  --spacing-header: 70px;
-  --width-page: 1200px;
+  --spacing-header: 3.5rem;
+  --width-page: 75rem;
 }
 
 
@@ -122,8 +122,6 @@
   }
 }
 
-
-
 /* blog page */
 @layer components {
 
@@ -157,7 +155,7 @@
     @apply ml-0.5 px-1.5 py-1 bg-gray-800 text-text-muted;
   }
 
-  .brand{
+  .brand {
     @apply my-3;
   }
   
@@ -170,10 +168,13 @@
   }
 
   .post-list-card {
-    @apply grid grid-cols-[80px_1fr] grid-rows-[auto_auto_auto] content-between;
-    @apply pt-2 h-[90px] lg:h-[140px];
+    @apply grid grid-cols-[3.75rem_1fr_2.5rem] grid-rows-[auto_auto_auto] content-between;
+    @apply bg-brand-card border border-brand-edge/30 rounded-xl overflow-hidden;
+    @apply transition-all hover:border-accent/50 hover:translate-x-1;
+    @apply h-[100px] lg:h-[140px];
     /* @apply border rounded-2xl border-accent; */
 
+    @apply lg:grid-cols-[5rem_1fr_4rem] lg:h-32;
     @apply lg:p-3 lg:gap-x-3;
 
     /* backgroun and shadow */
@@ -182,9 +183,9 @@
     @apply transition-transform hover:-translate-y-1;
 
     grid-template-areas: 
-      "image title"
-      "image description"
-      "author meta";
+      "image title action"
+      "image description action"
+      "author meta action";
     }
     
     .post-list-card-image {
@@ -206,7 +207,7 @@
   
     .post-list-card-title {
       grid-area: title;
-      @apply font-bold;
+      @apply font-bold pt-2;
       @apply lg:text-xl lg:font-bold;
       @apply truncate;
       /* @apply border border-orange-500; */
@@ -224,6 +225,21 @@
       @apply text-sm italic justify-self-end;
       /* @apply border border-orange-500; */
     }
+
+    .post-list-card-action {
+      grid-area: action;
+      @apply flex items-center justify-center;
+      
+      @apply border-l border-brand-edge/20 bg-brand-edge/5;
+      @apply transition-colors duration-200;
+      
+      height: 100%;
+    }
+
+    .post-list-card-action:hover {
+        @apply bg-accent/10;
+    }
+}
   
   .copy-btn {
     @apply sticky;
@@ -320,7 +336,7 @@
     @apply w-full;
     @apply lg:w-3/4;
   }
-}
+
 
 @layer utilities {
   
