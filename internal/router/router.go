@@ -57,7 +57,6 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	// routes
 	appMux.Handle("GET /{$}", deps.BlogHandler.HandleIndex())
 	appMux.Handle("GET /post/{id}", deps.BlogHandler.HandlePost())
-	appMux.Handle("GET /metrics", deps.BlogHandler.HandleMetrics())
 
 	appMux.HandleFunc("/", deps.BlogHandler.NotFound)
 
@@ -82,6 +81,8 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	appHandler := middleware.Chain(appMux, middlewareStack...)
 
 	rootMux := http.NewServeMux()
+
+	rootMux.Handle("GET /metrics", deps.BlogHandler.HandleMetrics())
 
 	if deps.PrometheusHandler != nil {
 		rootMux.Handle("GET /metrics/prometheus", deps.PrometheusHandler)

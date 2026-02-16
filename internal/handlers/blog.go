@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/justinas/nosurf"
@@ -36,10 +37,11 @@ type BlogHandler struct {
 	Tracer      trace.Tracer
 	Metrics     *telemetry.Metrics
 	Sessions    *middleware.Sessions
+	StartTime   time.Time
 }
 
 // NewBlogHandler creates the controller
-func NewBlogHandler(store content.PostService, db storage.Store, renderer *content.MarkDownRenderer, title string, needsInvite bool, inviteCode string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics, sm *middleware.Sessions) *BlogHandler {
+func NewBlogHandler(store content.PostService, db storage.Store, renderer *content.MarkDownRenderer, title string, needsInvite bool, inviteCode string, logger *slog.Logger, geo *middleware.GeoStats, tracer trace.Tracer, metrics *telemetry.Metrics, sm *middleware.Sessions, startTime time.Time) *BlogHandler {
 	return &BlogHandler{
 		Store:       store,
 		DB:          db,
@@ -52,6 +54,7 @@ func NewBlogHandler(store content.PostService, db storage.Store, renderer *conte
 		Tracer:      tracer,
 		Metrics:     metrics,
 		Sessions:    sm,
+		StartTime:   startTime,
 	}
 }
 

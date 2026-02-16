@@ -23,24 +23,28 @@ func (h *BlogHandler) HandleMetrics() http.Handler {
 		// force Go to read the current memory state
 		runtime.ReadMemStats(&m)
 
+		uptime := time.Since(h.StartTime).Truncate(time.Second)
+
 		stats := struct {
 			Alloc        string                    `json:"allocated_heap_mb"`  // Active objects in heap
 			TotalAlloc   string                    `json:"total_alloc_mb"`     // Cumulative allocs (shows churn)
 			Sys          string                    `json:"system_obtained_mb"` // Total RAM asked from OS
 			NumGC        uint32                    `json:"gc_cycles"`          // Number of garbage collections
-			CurrentTime  time.Time                 `json:"server_time"`
-			Goroutines   int                       `json:"goroutines"` // Active "threads"
-			Cores        int                       `json:"cpu_cores"`  // Hardware available
+			Goroutines   int                       `json:"goroutines"`         // Active "threads"
+			Cores        int                       `json:"cpu_cores"`          // Hardware available
 			TopCountries []*middleware.CountryStat `json:"top_countries"`
+			Uptime       string                    `json:"uptime"`
+			ServerTime   time.Time                 `json:"server_time"`
 		}{
 			Alloc:        bToMb(m.Alloc),
 			TotalAlloc:   bToMb(m.TotalAlloc),
 			Sys:          bToMb(m.Sys),
 			NumGC:        m.NumGC,
-			CurrentTime:  time.Now().Local().Truncate(time.Millisecond),
 			Goroutines:   runtime.NumGoroutine(),
 			Cores:        runtime.NumCPU(),
 			TopCountries: h.GeoStats.GetTopCountries(20),
+			Uptime:       uptime.String(),
+			ServerTime:   time.Now().UTC().Truncate(time.Millisecond),
 		}
 
 		w.Header().Set("Content-Type", "application/json")

@@ -33,9 +33,10 @@ type App struct {
 	Media     content.MediaService
 	DB        storage.Store
 	Telemetry *telemetry.Telemetry
+	StartTime time.Time
 }
 
-func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts content.PostService, media content.MediaService, handler http.Handler, db storage.Store, tel *telemetry.Telemetry) (*App, error) {
+func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts content.PostService, media content.MediaService, handler http.Handler, db storage.Store, tel *telemetry.Telemetry, startTime time.Time) (*App, error) {
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTP.Port),
@@ -53,6 +54,7 @@ func NewApp(ctx context.Context, cfg *config.Config, logger *slog.Logger, posts 
 		Media:     media,
 		DB:        db,
 		Telemetry: tel,
+		StartTime: startTime,
 	}, nil
 }
 
@@ -101,6 +103,8 @@ func main() {
 	if err := cfg.Validate(); err != nil {
 		panic(fmt.Sprintf("invalid configuration: %v", err))
 	}
+
+	start := time.Now().UTC()
 
 	stderr := os.Stderr
 	logHandler := slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: cfg.Logger.Level})
@@ -189,7 +193,7 @@ func main() {
 
 	needsInvite := cfg.Auth.InviteCode != ""
 
-	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, needsInvite, cfg.Auth.InviteCode, logger, geo, tel.Tracer, metrics, session)
+	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, needsInvite, cfg.Auth.InviteCode, logger, geo, tel.Tracer, metrics, session, start)
 
 	// cheap cheap vps?
 	numProcs := max(1, runtime.GOMAXPROCS(0)-1)
@@ -223,7 +227,7 @@ func main() {
 	router := router.NewRouter(routerDeps)
 
 	// initialise
-	app, err := NewApp(rootCtx, cfg, logger, repo, assetManager, router, db, tel)
+	app, err := NewApp(rootCtx, cfg, logger, repo, assetManager, router, db, tel, start)
 	if err != nil {
 		logger.Error("server initialise", "err", err)
 		os.Exit(1)
