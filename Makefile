@@ -124,7 +124,7 @@ tailwind/build: tailwind/install
 tailwind/watch: tailwind/install
 	@$(TAILWIND_BIN) -i ./static/tailwind.css -o ./static/style.css --watch
 
-DB_URL ?= sqlite3://./blog.db
+DB_URL ?= sqlite3://./blogengine.db
 MIGRATIONS_DIR ?= ./migrations
 
 ## db/migrations/new name=$1: create a new database migration
