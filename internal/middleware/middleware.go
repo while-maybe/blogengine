@@ -41,6 +41,12 @@ func Logger(logger *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+			switch r.URL.Path {
+			case "/healthz", "/metrics", "/metrics/prometheus":
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			start := time.Now()
 
 			next.ServeHTTP(w, r)
