@@ -42,7 +42,7 @@ func Logger(logger *slog.Logger) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			switch r.URL.Path {
-			case "/healthz", "/metrics", "/metrics/prometheus":
+			case "/healthz", "/metrics":
 				next.ServeHTTP(w, r)
 				return
 			}

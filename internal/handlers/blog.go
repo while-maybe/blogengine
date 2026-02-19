@@ -85,6 +85,11 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		ctx, span := h.Tracer.Start(r.Context(), "HandlePost")
 		defer span.End()
 
+		username := h.GetUserFromSession(r)
+		if username != "" {
+			span.SetAttributes(attribute.String("user.name", username))
+		}
+
 		idStr := r.PathValue("id")
 		span.SetAttributes(attribute.String("post.id_str", idStr))
 

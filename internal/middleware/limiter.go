@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"blogengine/internal/telemetry"
 	"context"
 	"errors"
 	"log/slog"
@@ -24,18 +25,20 @@ type IPRateLimiter struct {
 	rate         rate.Limit
 	burst        int
 	trustedProxy bool
+	Metrics      *telemetry.Metrics
 }
 
 var (
 	ErrInvalidIP = errors.New("invalid IP")
 )
 
-func NewIPRateLimiter(ctx context.Context, rps, burst int, trustedProxy bool) *IPRateLimiter {
+func NewIPRateLimiter(ctx context.Context, rps, burst int, trustedProxy bool, metrics *telemetry.Metrics) *IPRateLimiter {
 	l := &IPRateLimiter{
 		ips:          make(map[string]*client),
 		rate:         rate.Limit(rps),
 		burst:        burst,
 		trustedProxy: trustedProxy,
+		Metrics:      metrics,
 	}
 
 	// cleanup stale entries
@@ -129,6 +132,8 @@ func (i *IPRateLimiter) Middleware(logger *slog.Logger) Middleware {
 
 				retrySeconds := int(delay.Seconds())
 				retrySeconds = max(1, retrySeconds)
+
+				i.Metrics.RateLimitHitsTotal.Add(r.Context(), 1)
 
 				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds))
 				w.Header().Set("X-RateLimit-Limit", strconv.Itoa(i.burst))

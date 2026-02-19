@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -19,12 +20,15 @@ func Observability(tracer trace.Tracer, metrics *telemetry.Metrics, logger *slog
 
 			traceID := uuid.Must(uuid.NewV7()).String()
 
-			ctx, span := tracer.Start(r.Context(), r.Method+" "+r.URL.Path, trace.WithAttributes(
-				attribute.String("http.method", r.Method),
-				attribute.String("http.route", r.URL.Path),
-				attribute.String("http.user_agent", r.Header.Get("User-Agent")),
-				attribute.String("trace.id", traceID),
-			))
+			ctx, span := tracer.Start(r.Context(), r.Method+" "+r.URL.Path,
+				trace.WithSpanKind(trace.SpanKindServer),
+				trace.WithAttributes(
+					attribute.String("http.method", r.Method),
+					attribute.String("http.route", r.URL.Path),
+					attribute.String("http.user_agent", r.Header.Get("User-Agent")),
+					attribute.String("trace.id", traceID),
+				),
+			)
 			defer span.End()
 
 			w.Header().Set("X-Trace-ID", traceID)
@@ -49,8 +53,13 @@ func Observability(tracer trace.Tracer, metrics *telemetry.Metrics, logger *slog
 			wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			next.ServeHTTP(wrapped, r.WithContext(ctx))
+			if wrapped.statusCode >= 400 {
+				span.SetStatus(codes.Error, http.StatusText(wrapped.statusCode))
+			} else {
+				span.SetStatus(codes.Ok, "OK")
+			}
 
-			duration := time.Since(start).Milliseconds()
+			duration := float64(time.Since(start).Milliseconds())
 
 			attrs := []attribute.KeyValue{
 				attribute.String("http.method", r.Method),
@@ -59,11 +68,11 @@ func Observability(tracer trace.Tracer, metrics *telemetry.Metrics, logger *slog
 			}
 
 			metrics.HTTPRequestsTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
-			metrics.HTTPRequestDuration.Record(ctx, float64(duration), metric.WithAttributes(attrs...))
+			metrics.HTTPRequestDuration.Record(ctx, duration, metric.WithAttributes(attrs...))
 
 			span.SetAttributes(
 				attribute.Int("http.status_code", wrapped.statusCode),
-				attribute.Float64("http.duration_seconds", float64(duration)),
+				attribute.Float64("http.duration_ms", duration),
 			)
 
 			logger.Info("request completed",

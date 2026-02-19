@@ -50,7 +50,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Add non-root user: # -S = system user, -G = add to group
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+RUN groupadd -g 1000 appgroup && \
+    useradd -u 1000 -g appgroup -m -s /bin/bash appuser
 
 WORKDIR /app
 

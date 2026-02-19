@@ -1,27 +1,124 @@
 {
-  "title": "Blog Engine Metrics",
+  "title": "Engine Telemetry",
   "panels": [
     {
+      "id": 100,
+      "title": "",
+      "type": "text",
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": null,
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "line",
+            "spanNulls": true,
+            "lineWidth": 2
+          }
+        }
+      },
+      "options": {
+        "content": "<div style='text-align:center'><h1 style='font-size:32px; color:#56B4E9'>$service Metrics Dashboard</h1></div>",
+        "mode": "html"
+      }
+    },
+    {
+      "id": 50,
+      "title": "Uptime",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 2 },
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "s",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        }
+      },
+      "targets": [
+        { "expr": "process_uptime_seconds{service_name=\"$service\"}", "instant": true }
+      ],
+      "options": { 
+        "graphMode": "none", 
+        "textMode": "value" 
+      }
+    },
+    {
+      "id": 51,
+      "title": "Heap Memory",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 2 },
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "decbytes", 
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        }
+      },
+      "targets": [
+        { "expr": "process_memory_heap_alloc_mb{service_name=\"$service\"} * 1024 * 1024", "instant": false }
+      ],
+      "options": { "graphMode": "area" }
+    },
+    {
+      "id": 52,
+      "title": "Goroutines",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 2 },
+      "fieldConfig": {
+        "defaults": { 
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }] }
+        }
+      },
+      "targets": [
+        { "expr": "process_goroutines{service_name=\"$service\"}", "instant": false }
+      ],
+      "options": { "graphMode": "area" }
+    },
+    {
       "id": 1,
-      "title": "HTTP Requests/sec",
-      "type": "graph",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "title": "Requests (Last 2 min)",
+      "type": "timeseries",
+      "gridPos": {"h": 12, "w": 12, "x": 0, "y": 6},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "spanNulls": true,
+            "fillOpacity": 15,
+            "lineWidth": 4
+          },
+          "min": 0,
+          "decimals": 0
+        }
+      },
       "targets": [
         {
-          "expr": "rate(http_requests_total[1m])",
-          "legendFormat": "{{method}} {{route}}"
+          "expr": "sum by (http_method, http_route) (increase(http_requests_total{service_name=\"$service\"}[2m]))",
+          "legendFormat": "{{http_method}} {{http_route}}"
         }
       ]
     },
     {
       "id": 2,
       "title": "Request Duration (p95)",
-      "type": "graph",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "type": "timeseries",
+      "gridPos": {"h": 12, "w": 12, "x": 12, "y": 4},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "spanNulls": true,
+            "lineWidth": 2
+          },
+          "unit": "ms",
+          "min": 0,
+          "max": null
+        }
+      },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(http_request_duration_milliseconds_bucket[5m]))",
-          "legendFormat": "p95 (ms)"
+          "expr": "histogram_quantile(0.95, sum by (le, http_method, http_route) (increase(http_request_duration_milliseconds_bucket{service_name=\"$service\"}[5m])))",
+          "legendFormat": "{{http_method}} {{http_route}} (p95)"
         }
       ]
     },
@@ -29,10 +126,10 @@
       "id": 3,
       "title": "Active HTTP Requests",
       "type": "stat",
-      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 12},
       "targets": [
         {
-          "expr": "http_active_requests"
+          "expr": "http_active_requests{service_name=\"$service\"}"
         }
       ]
     },
@@ -40,10 +137,10 @@
       "id": 4,
       "title": "Cache Hit Rate",
       "type": "stat",
-      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 12},
       "targets": [
         {
-          "expr": "rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m]))",
+          "expr": "rate(cache_hits_total{service_name=\"$service\"}[5m]) / (rate(cache_hits_total{service_name=\"$service\"}[5m]) + rate(cache_misses_total{service_name=\"$service\"}[5m]))",
           "legendFormat": "hit rate"
         }
       ]
@@ -52,10 +149,10 @@
       "id": 5,
       "title": "Posts Loaded",
       "type": "stat",
-      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 12},
       "targets": [
         {
-          "expr": "posts_loaded"
+          "expr": "posts_loaded{service_name=\"$service\"}"
         }
       ]
     },
@@ -63,10 +160,10 @@
       "id": 6,
       "title": "Rate Limit Hits",
       "type": "stat",
-      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 12},
       "targets": [
         {
-          "expr": "rate(rate_limit_hits_total[5m])"
+          "expr": "rate(rate_limit_hits_total{service_name=\"$service\"}[5m])"
         }
       ]
     },
@@ -74,11 +171,12 @@
       "id": 7,
       "title": "Top Posts by Views",
       "type": "table",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
       "targets": [
         {
-          "expr": "topk(10, sum by (post_title) (post_views_total))",
-          "format": "table"
+          "expr": "sum by (post_title) (post_views_total{service_name=\"$service\"})",
+          "format": "table",
+          "instant": true
         }
       ]
     },
@@ -86,16 +184,35 @@
       "id": 8,
       "title": "HTTP Status Codes",
       "type": "piechart",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
       "targets": [
         {
-          "expr": "sum by (http_status_code) (rate(http_requests_total[5m]))",
-          "legendFormat": "{{http_status_code}}"
+          "expr": "sum by (http_status_code) (increase(http_requests_total{service_name=\"$service\"}[1h]))",
+          "legendFormat": "{{http_status_code}}",
+          "instant": true
         }
-      ]
+      ],
+      "options": {
+        "reduceOptions": { "values": true, "calcs": ["lastNotNull"] }
+      }
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "time": {"from": "now-1h", "to": "now"},
-  "timezone": "browser"
+  "timezone": "browser",
+
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Prometheus",
+        "definition": "label_values(service_name)",
+        "query": "label_values(service_name)",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  }
 }

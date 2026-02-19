@@ -3,6 +3,8 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"time"
 
 	"go.opentelemetry.io/otel/metric"
 )
@@ -24,6 +26,9 @@ type Metrics struct {
 	AssetRequestsTotal metric.Int64Counter
 	// middlewares
 	AuthWorkDuration metric.Float64Histogram
+	Uptime           metric.Float64ObservableGauge
+	HeapAlloc        metric.Float64ObservableGauge
+	GoRoutines       metric.Int64ObservableGauge
 }
 
 func NewMetrics(meter metric.Meter) (*Metrics, error) {
@@ -117,6 +122,39 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		return nil, fmt.Errorf("failed to create auth_work_duration: %w", err)
 	}
 
+	uptime, err := meter.Float64ObservableGauge("process_uptime_seconds")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create process_uptime_seconds: %w", err)
+	}
+
+	heap, err := meter.Float64ObservableGauge("process_memory_heap_alloc_mb")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create process_memory_heap_alloc: %w", err)
+	}
+	goroutines, err := meter.Int64ObservableGauge(
+		"process_goroutines",
+		metric.WithDescription("Active goroutines"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create process_goroutines: %w", err)
+	}
+
+	startTime := time.Now().UTC()
+	_, err = meter.RegisterCallback(func(_ context.Context, obs metric.Observer) error {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+
+		obs.ObserveFloat64(uptime, time.Since(startTime).Seconds())
+		obs.ObserveFloat64(heap, float64(m.Alloc)/1024/1024)
+		obs.ObserveInt64(goroutines, int64(runtime.NumGoroutine()))
+
+		return nil
+	}, uptime, heap, goroutines)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to register metrics callback: %w", err)
+	}
+
 	return &Metrics{
 		HTTPRequestsTotal:   httpRequestsTotal,
 		HTTPRequestDuration: httpRequestDuration,
@@ -128,6 +166,9 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		RateLimitHitsTotal:  rateLimitHitsTotal,
 		AssetRequestsTotal:  assetRequestsTotal,
 		AuthWorkDuration:    authWorkDuration,
+		Uptime:              uptime,
+		HeapAlloc:           heap,
+		GoRoutines:          goroutines,
 	}, nil
 }
 

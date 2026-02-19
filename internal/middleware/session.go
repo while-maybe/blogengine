@@ -8,6 +8,8 @@ import (
 
 	"github.com/alexedwards/scs/sqlite3store"
 	"github.com/alexedwards/scs/v2"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Sessions struct {
@@ -29,10 +31,16 @@ func NewSessionManager(ttl time.Duration, secure bool, db *sql.DB) *Sessions {
 	return &Sessions{Manager: sm}
 }
 
-func (s *Sessions) Middleware(logger *slog.Logger) Middleware {
+func (s *Sessions) Middleware(logger *slog.Logger, tracer trace.Tracer) Middleware {
 	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := tracer.Start(r.Context(), "middleware.Session")
+			defer span.End()
 
-		logger.Info("session manager", "id", s.Manager.Cookie.Name)
-		return s.Manager.LoadAndSave(next)
+			// tag span with cookie name
+			span.SetAttributes(attribute.String("session.cookie", s.Manager.Cookie.Name))
+
+			s.Manager.LoadAndSave(next).ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }

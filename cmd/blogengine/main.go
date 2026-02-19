@@ -183,11 +183,11 @@ func main() {
 	sessionLifetime := 24 * time.Hour
 	session := middleware.NewSessionManager(sessionLifetime, cfg.App.Environment == "prod", db.RawDB())
 
-	limiter := middleware.NewIPRateLimiter(rootCtx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted)
+	limiter := middleware.NewIPRateLimiter(rootCtx, cfg.Limiter.RPS, cfg.Limiter.Burst, cfg.Proxy.Trusted, metrics)
 
 	authRPS := 1
 	authBurst := 3
-	authLimiter := middleware.NewIPRateLimiter(rootCtx, authRPS, authBurst, cfg.Proxy.Trusted)
+	authLimiter := middleware.NewIPRateLimiter(rootCtx, authRPS, authBurst, cfg.Proxy.Trusted, metrics)
 
 	geo := middleware.NewGeoStats(rootCtx)
 
@@ -203,25 +203,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	assetHandler := &handlers.AssetHandler{Assets: assetManager, Processor: imgProcessor}
+	assetHandler := &handlers.AssetHandler{Assets: assetManager, Processor: imgProcessor, Tracer: tel.Tracer, Metrics: metrics}
 
 	csrf := middleware.NewCSRF(cfg.App.Environment == "prod")
 	csp := middleware.NewCSP(cfg.App.Environment == "prod")
 
 	routerDeps := router.RouterDependencies{
-		Cfg:               cfg,
-		Logger:            logger,
-		BlogHandler:       blogHandler,
-		AssetHandler:      assetHandler,
-		Limiter:           limiter,
-		AuthLimiter:       authLimiter,
-		GeoStats:          geo,
-		Tracer:            tel.Tracer,
-		Metrics:           metrics,
-		PrometheusHandler: tel.PrometheusHandler,
-		Session:           session,
-		CSRF:              csrf,
-		CSP:               csp,
+		Cfg:          cfg,
+		Logger:       logger,
+		BlogHandler:  blogHandler,
+		AssetHandler: assetHandler,
+		Limiter:      limiter,
+		AuthLimiter:  authLimiter,
+		GeoStats:     geo,
+		Tracer:       tel.Tracer,
+		Metrics:      metrics,
+		Session:      session,
+		CSRF:         csrf,
+		CSP:          csp,
 	}
 
 	router := router.NewRouter(routerDeps)

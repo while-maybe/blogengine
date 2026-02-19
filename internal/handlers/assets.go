@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"blogengine/internal/content"
+	"blogengine/internal/telemetry"
 	"context"
 	"fmt"
 	"net/http"
@@ -13,16 +14,23 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type AssetHandler struct {
 	Assets    content.MediaService
 	Processor content.ImageProcessorService
+	Tracer    trace.Tracer
+	Metrics   *telemetry.Metrics
 }
 
 const cacheForAYear = 31536000
 
 func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.Tracer.Start(r.Context(), "AssetHandler.ServeHTTP")
+	defer span.End()
+
 	// expected format: /assets/{key} where key = <uuid>_<width>
 	key := r.PathValue("key")
 	parts := strings.Split(key, "_")
@@ -57,6 +65,9 @@ func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// webp already exists
 	if _, err := os.Stat(cachePath); err == nil {
+		span.SetAttributes(attribute.String("cache.status", "hit"))
+		h.Metrics.CacheHitsTotal.Add(ctx, 1)
+
 		w.Header().Set("X-Cache", "HIT")
 		w.Header().Set("Content-Type", "image/webp")
 		// attempt to cache in the browser for a long time
@@ -64,6 +75,9 @@ func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, cachePath)
 		return
 	}
+
+	span.SetAttributes(attribute.String("cache.status", "miss"))
+	h.Metrics.CacheMissesTotal.Add(ctx, 1)
 
 	// webp does not exist
 	w.Header().Set("X-Cache", "MISS")

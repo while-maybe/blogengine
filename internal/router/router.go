@@ -14,19 +14,18 @@ import (
 
 // RouterDependencies holds everything needed to register routes.
 type RouterDependencies struct {
-	Cfg               *config.Config
-	Logger            *slog.Logger
-	BlogHandler       *handlers.BlogHandler
-	AssetHandler      *handlers.AssetHandler
-	Limiter           *middleware.IPRateLimiter
-	AuthLimiter       *middleware.IPRateLimiter
-	GeoStats          *middleware.GeoStats
-	Tracer            trace.Tracer
-	Metrics           *telemetry.Metrics
-	PrometheusHandler http.Handler
-	Session           *middleware.Sessions
-	CSRF              *middleware.CSRF
-	CSP               *middleware.CSP
+	Cfg          *config.Config
+	Logger       *slog.Logger
+	BlogHandler  *handlers.BlogHandler
+	AssetHandler *handlers.AssetHandler
+	Limiter      *middleware.IPRateLimiter
+	AuthLimiter  *middleware.IPRateLimiter
+	GeoStats     *middleware.GeoStats
+	Tracer       trace.Tracer
+	Metrics      *telemetry.Metrics
+	Session      *middleware.Sessions
+	CSRF         *middleware.CSRF
+	CSP          *middleware.CSP
 }
 
 func NewRouter(deps RouterDependencies) http.Handler {
@@ -73,7 +72,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 		deps.CSP.Middleware(),
 		deps.Limiter.Middleware(deps.Logger),
 		deps.GeoStats.Middleware(deps.Logger),
-		deps.Session.Middleware(deps.Logger),
+		deps.Session.Middleware(deps.Logger, deps.Tracer),
 		deps.CSRF.Middleware(deps.Logger),
 		middleware.Logger(deps.Logger), // Inner logger (shows simple text logs)
 	)
@@ -83,10 +82,6 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	rootMux := http.NewServeMux()
 
 	rootMux.Handle("GET /metrics", deps.BlogHandler.HandleMetrics())
-
-	if deps.PrometheusHandler != nil {
-		rootMux.Handle("GET /metrics/prometheus", deps.PrometheusHandler)
-	}
 
 	// lightweight for docker keepalive
 	rootMux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
