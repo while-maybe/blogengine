@@ -90,12 +90,8 @@
   .top-banner {
     @apply sticky top-0 z-50;
     @apply w-full h-header md:h-[85px] flex flex-col justify-center items-center;
-    background-image: 
-      linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 0.9)), 
-      url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
-    
-    background-size: cover;
-    background-position: center;
+    background-image: linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 0.9));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     /* @apply border border-amber-300; */
   }
   
