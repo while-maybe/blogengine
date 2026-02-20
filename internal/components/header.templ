@@ -4,13 +4,13 @@ templ headerTemplate(c CommonData) {
   <header class="top-banner" id="main-header">
     <div class="banner-content">
         <h1>
-          <a href="/" class="brand text-2xl lg:text-4xl">{c.Title}</a>
+          <a href="/" class="brand text-2xl lg:text-4xl my-auto">{c.Title}</a>
         </h1>
 
-        <nav class="flex items-center gap-x-4">
+        <nav class="items-center gap-x-4">
         if c.Username != "" {
-                <div class="flex items-center gap-x-4">
-                    <span class="text-text-muted text-sm hidden md:block">Welcome, <b class="text-text-main">{ c.Username }</b></span>
+                <div class="hidden md:flex items-center gap-x-4">
+                    <span class="text-text-muted text-sm">Welcome, <b class="text-text-main">{ c.Username }</b></span>
                     <form action="/logout" method="POST" class="inline">
                         <input type="hidden" name="csrf_token" value={ c.CSRFToken } />
                         <button type="submit" class="text-sm font-semibold text-accent hover:underline cursor-pointer bg-transparent border-none p-0">
@@ -19,14 +19,60 @@ templ headerTemplate(c CommonData) {
                     </form>
                 </div>
         } else {
-                <div class="flex items-center gap-x-4">
+                <div class="hidden md:flex items-center gap-x-4">
                     <a href="/login" class="text-sm font-semibold text-text-main hover:text-accent transition-colors">Login</a>
                     <a href="/register" class="px-4 py-2 bg-accent text-brand-dark text-sm font-bold rounded-lg hover:opacity-90 transition-opacity">
                         Register
                     </a>
                 </div>
             }
+            @MobileMenu(c)
         </nav>
     </div>
   </header>
+}
+
+templ MobileMenu(c CommonData) {
+    <input type="checkbox" id="mobile-menu-toggle" class="peer hidden" />
+
+    <label for="mobile-menu-toggle" class="md:hidden cursor-pointer z-50 relative text-accent hover:text-accent/80 transition-colors peer-checked:hidden block">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+    </label>
+    
+    <label for="mobile-menu-toggle" class="md:hidden cursor-pointer z-50 relative text-accent hover:text-accent/80 transition-colors  peer-checked:block hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </label>
+
+    <div id="mobile-nav" class="fixed inset-0 z-40 bg-brand-dark/95 opacity-95 backdrop-blur-sm transition-transform duration-200 ease-in-out translate-x-full peer-checked:translate-x-0 md:hidden flex flex-col justify-start items-end gap-4 pr-5 pt-6">
+
+        <label for="mobile-menu-toggle" class="fixed inset-0 z-30 hidden peer-checked:block cursor-default" aria-hidden="true"></label>
+
+        @Separator("actions")
+
+        if c.Username != "" {
+            <a href="/profile" class="text-xl text-text-main hover:text-accent">Profile</a>
+            <!-- Logout Form for Mobile -->
+            <form action="/logout" method="POST">
+                <input type="hidden" name="csrf_token" value={ c.CSRFToken } />
+                <button type="submit" class="text-xl text-accent bg-transparent border-none cursor-pointer">Logout</button>
+            </form>
+        } else {
+            <a href="/login" class="text-xl text-accent">Login</a>
+            <a href="/register" class="text-xl text-text-main">Register</a>
+
+        }
+
+        @Separator("Go to...")
+    
+        <a href="/" class="text-xl text-text-main hover:text-accent">Home</a>
+
+        <a href="/about" class="text-xl text-text-main hover:text-accent">About</a>
+
+    </div>
+
+    <script src="/static/js/mobile-menu.js"></script>
 }

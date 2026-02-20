@@ -100,7 +100,7 @@
   }
   
   .banner-content { 
-    @apply w-full h-auto text-center flex flex-row justify-between items-center px-6;
+    @apply w-full h-auto text-center flex flex-row justify-between items-center px-4;
     @apply lg:w-3/4;
     /* @apply border-2 border-accent; */
   }
