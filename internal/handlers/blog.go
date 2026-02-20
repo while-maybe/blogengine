@@ -135,7 +135,7 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		if err != nil {
 			switch {
 			case errors.Is(err, content.ErrFileTooLarge):
-				h.renderError(w, r, http.StatusRequestEntityTooLarge, "413 entity too large", "post too large")
+				h.RenderError(w, r, http.StatusRequestEntityTooLarge, "413 entity too large", "post too large")
 			default:
 				h.InternalError(w, r, err)
 			}

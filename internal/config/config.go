@@ -75,7 +75,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		App: AppConfig{
 			Name:           "Your blog",
-			Environment:    "prod",
+			Environment:    "dev",
 			SourcesDir:     "./sources",
 			AssetNamespace: "570e8400-c29b-45d4-a716-446655440700",
 		},

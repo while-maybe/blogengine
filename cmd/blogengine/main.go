@@ -205,7 +205,7 @@ func main() {
 
 	assetHandler := &handlers.AssetHandler{Assets: assetManager, Processor: imgProcessor, Tracer: tel.Tracer, Metrics: metrics}
 
-	csrf := middleware.NewCSRF(cfg.App.Environment == "prod")
+	csrf := middleware.NewCSRF(cfg.App.Environment == "prod", blogHandler.RenderError)
 	csp := middleware.NewCSP(cfg.App.Environment == "prod")
 
 	routerDeps := router.RouterDependencies{
