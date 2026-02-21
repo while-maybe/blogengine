@@ -158,3 +158,35 @@ func (h *BlogHandler) HandlePost() http.Handler {
 		components.BlogPost(common, post.ID, body, comments).Render(ctx, w)
 	})
 }
+
+func (h *BlogHandler) HandleAbout() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		common := h.newCommonData(r)
+		components.About(common).Render(r.Context(), w)
+	})
+}
+
+func (h *BlogHandler) HandleContact() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		common := h.newCommonData(r)
+		components.Contact(common).Render(r.Context(), w)
+	})
+}
+
+func (h *BlogHandler) HandleTerms() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		common := h.newCommonData(r)
+		components.Terms(common).Render(r.Context(), w)
+	})
+}
+
+func (h *BlogHandler) HandlePrivacy() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		common := h.newCommonData(r)
+		components.Privacy(common).Render(r.Context(), w)
+	})
+}

@@ -59,6 +59,12 @@ func NewRouter(deps RouterDependencies) http.Handler {
 
 	appMux.HandleFunc("/", deps.BlogHandler.NotFound)
 
+	// static
+	appMux.Handle("/about", deps.BlogHandler.HandleAbout())
+	appMux.Handle("/privacy", deps.BlogHandler.HandlePrivacy())
+	appMux.Handle("/terms", deps.BlogHandler.HandleTerms())
+	appMux.Handle("/contact", deps.BlogHandler.HandleContact())
+
 	middlewareStack := []middleware.Middleware{
 		middleware.Recover(deps.Logger),
 	}

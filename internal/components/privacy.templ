@@ -1,0 +1,72 @@
+package components
+
+templ Privacy(c CommonData) {
+    @baseTemplate(c) {
+        <main class="max-w-3xl mx-auto px-6 py-12 text-text-main">
+            <h1 class="text-4xl md:text-5xl font-serif font-bold text-brand-edge mb-4">Privacy Policy</h1>
+            <p class="text-sm text-text-muted mb-10">Last updated: February 2026</p>
+
+            <div class="prose prose-invert prose-lg space-y-8">
+
+                <section>
+                    <h2 class="text-2xl font-bold text-accent mb-3">The short version</h2>
+                    <p>
+                        This is a personal blog.
+                        <strong>I don't want your data.</strong>
+                        I collect as little as possible,
+                        I don't sell anything, and for now I don't use third-party analytics or tracking services.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-accent mb-3">What I collect</h2>
+                    <p>
+                        This site uses two types of cookies, both strictly necessary for the site to function:
+                    </p>
+                    <ul class="list-disc pl-6 space-y-2 marker:text-brand-edge mt-3">
+                        <li>
+                            <strong>Session cookie</strong> — keeps you logged in if you have an account.
+                            It expires when you close your browser or after 24 hours.
+                        </li>
+                        <li>
+                            <strong>CSRF token</strong> — protects forms from cross-site request forgery attacks.
+                            It is a security measure, not a tracking mechanism.
+                        </li>
+                    </ul>
+                    <p class="mt-4">
+                        No analytics cookies. No advertising cookies. No fingerprinting.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-accent mb-3">Server logs</h2>
+                    <p>
+                        Like any web server, this site may log basic request information (IP address, page visited, timestamp) for security and operational purposes. These logs are not shared with third parties and are not used to build profiles of visitors.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-accent mb-3">A word of caution</h2>
+                    <p>
+                        This is a personal project maintained by one person in their spare time. While I take security seriously — sessions are encrypted, CSRF protection is enabled, and the database is not exposed to the internet — I am not a security company. I cannot guarantee the absolute security of any data you provide. Please don't use a password here that you use anywhere important.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-accent mb-3">Your rights (UK GDPR)</h2>
+                    <p>
+                        If you have an account on this site and wish to have it deleted, this can be done from your account settings page.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-accent mb-3">Changes</h2>
+                    <p>
+                        If anything material changes about how this site handles data, I'll update this page when I can.
+                    </p>
+                </section>
+            </div>
+        </main>
+    }
+}
+

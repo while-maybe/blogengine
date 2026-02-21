@@ -1,0 +1,24 @@
+package components
+
+templ Contact(c CommonData) {
+    @baseTemplate(c) {
+        <main class="max-w-3xl mx-auto px-6 py-12 text-text-main">
+            <h1 class="text-4xl md:text-5xl font-serif font-bold text-brand-edge mb-8">Contact</h1>
+
+            <div class="prose prose-invert prose-lg space-y-6">
+                <p>
+                    I'd rather keep this space personal — which means not publishing personal contact details.
+                </p>
+                <p>
+                    That said, if something on the site caught your attention, you found a bug,
+                    or you just want to leave a note, I try to read every comment. Please drop one below.
+                </p>
+
+                // TODO: wire up to comment system
+                <div class="mt-10 p-6 border border-brand-edge/30 rounded">
+                    <p class="text-text-muted text-sm italic">Comments coming soon.</p>
+                </div>
+            </div>
+        </main>
+    }
+}

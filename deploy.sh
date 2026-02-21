@@ -53,7 +53,10 @@ rm -rf "$TEMP_DIR"
 echo "🐳 Starting Docker containers..."
 cd "$TARGET_DIR"
 
+docker compose down --remove-orphans
+docker volume rm blogengine_lgtm_data
+
 # Pull latest images and recreate containers
-docker compose up -d --pull always --remove-orphans --force-recreate
+docker compose up -d --pull always --force-recreate
 
 echo "✨ Deployment Complete!"

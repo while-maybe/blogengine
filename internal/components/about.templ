@@ -1,0 +1,30 @@
+package components
+
+templ About(c CommonData) {
+    @baseTemplate(c) {
+        <main class="max-w-3xl mx-auto px-6 py-12 text-text-main">
+            <h1 class="text-4xl md:text-5xl font-serif font-bold text-brand-edge mb-8">About the Engine</h1>
+            
+            <div class="prose prose-invert prose-lg">
+                <p>
+                    Yes, it's a blogging engine.
+                </p>
+
+                <p>
+                    It is also a <span class="text-accent font-bold">Systems Engineering</span> showcase written in Go 1.26.
+                </p>
+                <p>
+                    Designed to run efficiently on low-power hardware (originally designed to run on a Raspberry Pi 4 with SD card storage), built using modern concurrency patterns, HTMX for dynamic interactions, and a clean, layered architecture.
+                </p>
+
+                <h3 class="text-2xl font-bold mt-8 mb-4 text-accent">Tech Stack</h3>
+                <ul class="list-disc pl-6 space-y-2 marker:text-brand-edge">
+                    <li><strong>Language:</strong> Go 1.26</li>
+                    <li><strong>Database:</strong> SQLite + WebP image processing (via libwebp)</li>
+                    <li><strong>UI:</strong> Templ + Tailwind CSS (No Node.js runtime)</li>
+                    <li><strong>Observability:</strong> OpenTelemetry + Tempo + Grafana</li>
+                </ul>
+            </div>
+        </main>
+    }
+}
