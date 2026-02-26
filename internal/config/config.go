@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -60,15 +61,24 @@ type AuthConfig struct {
 	InviteCode    string
 }
 
+type S3Config struct {
+	Endpoint  string
+	Region    string
+	Bucket    string
+	AccessKey string
+	SecretKey string
+}
+
 type Config struct {
-	App     AppConfig
-	DB      DBConfig
-	Proxy   ProxyConfig
-	HTTP    HTTPConfig
-	Limiter RateLimiterConfig
-	Logger  LoggerConfig
-	Metrics TelemetryConfig
-	Auth    AuthConfig
+	App         AppConfig
+	DB          DBConfig
+	ObjectStore S3Config
+	Proxy       ProxyConfig
+	HTTP        HTTPConfig
+	Limiter     RateLimiterConfig
+	Logger      LoggerConfig
+	Metrics     TelemetryConfig
+	Auth        AuthConfig
 }
 
 func DefaultConfig() *Config {
@@ -82,6 +92,13 @@ func DefaultConfig() *Config {
 		DB: DBConfig{
 			Path:           "blogengine.db",
 			MigrationsPath: "./migrations",
+		},
+		ObjectStore: S3Config{
+			Endpoint:  "http://garage:3900",
+			Region:    "garage",
+			Bucket:    "blogengine-assets",
+			AccessKey: "",
+			SecretKey: "",
 		},
 		Proxy: ProxyConfig{
 			Trusted: true,
@@ -125,6 +142,13 @@ func LoadWithDefaults() *Config {
 		DB: DBConfig{
 			Path:           getEnv("DB_PATH", defaults.DB.Path),
 			MigrationsPath: getEnv("DB_MIGRATIONS_PATH", defaults.DB.MigrationsPath),
+		},
+		ObjectStore: S3Config{
+			Endpoint:  getEnv("S3_ENDPOINT", defaults.ObjectStore.Endpoint),
+			Region:    getEnv("S3_REGION", defaults.ObjectStore.Region),
+			Bucket:    getEnv("S3_BUCKET_NAME", defaults.ObjectStore.Bucket),
+			AccessKey: getEnv("S3_ACCESS_KEY_ID", defaults.ObjectStore.AccessKey),
+			SecretKey: getEnv("S3_SECRET_ACCESS_KEY", defaults.ObjectStore.SecretKey),
 		},
 		Proxy: ProxyConfig{
 			Trusted: getEnvAsBool("PROXY_TRUSTED", defaults.Proxy.Trusted),
@@ -269,8 +293,23 @@ func (c *Config) Validate() error {
 	if len(c.Auth.InviteCode) > 50 {
 		return fmt.Errorf("INVITE_CODE is too long (max 25 ascii chars/bytes)")
 	}
+	// object storage
+	if _, err := url.Parse(c.ObjectStore.Endpoint); err != nil {
+		return fmt.Errorf("%q is not a valid S3_ENDPOINT", c.ObjectStore.Endpoint)
+	}
+	if c.ObjectStore.Region == "" {
+		return fmt.Errorf("S3_REGION must not be empty")
+	}
+	if c.ObjectStore.Bucket == "" {
+		return fmt.Errorf("S3_BUCKET_NAME must not be empty")
+	}
 
-	// c.Proxy.TrustedProxy will default to true if not valid
-	// c.Logger.Info will default to Info if not valid
+	// 14 = GK is 2 bytes + 12 bytes for the key (represented as 24 ASCII hex characters: 2 hex chars -> 1byte)
+	if len(c.ObjectStore.AccessKey) != 26 {
+		return fmt.Errorf("S3_ACCESS_KEY_ID must be \"GK\" + 24 hex ascii characters for its key")
+	}
+	if len(c.ObjectStore.SecretKey) != 64 {
+		return fmt.Errorf("S3_SECRET_ACCESS_KEY must be 64 hex ascii characters long")
+	}
 	return nil
 }

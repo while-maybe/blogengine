@@ -40,7 +40,7 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	authDelay := 500 * time.Millisecond
 	authStack := func(h http.Handler) http.Handler {
 		h = middleware.SecureDelay(authDelay, deps.Metrics)(h)
-		h = deps.AuthLimiter.Middleware(deps.Logger)(h)
+		h = deps.AuthLimiter.Middleware(deps.Logger, deps.Tracer)(h)
 		return h
 	}
 
@@ -75,12 +75,12 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	}
 
 	middlewareStack = append(middlewareStack,
-		deps.CSP.Middleware(),
-		deps.Limiter.Middleware(deps.Logger),
-		deps.GeoStats.Middleware(deps.Logger),
+		deps.CSP.Middleware(deps.Tracer),
+		deps.Limiter.Middleware(deps.Logger, deps.Tracer),
+		deps.GeoStats.Middleware(deps.Logger, deps.Tracer),
 		deps.Session.Middleware(deps.Logger, deps.Tracer),
-		deps.CSRF.Middleware(deps.Logger),
-		middleware.Logger(deps.Logger), // Inner logger (shows simple text logs)
+		deps.CSRF.Middleware(deps.Logger, deps.Tracer),
+		middleware.Logger(deps.Logger, deps.Tracer), // Inner logger (shows simple text logs)
 	)
 
 	appHandler := middleware.Chain(appMux, middlewareStack...)

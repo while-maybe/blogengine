@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -137,10 +138,44 @@ func main() {
 		os.Exit(1)
 	}
 
-	storageProvider := storage.NewLocalStorage(cfg.App.SourcesDir)
+	// init object storage
+	storeInitDelay := 10 * time.Second
+	initStoreCtx, cancel := context.WithTimeout(rootCtx, storeInitDelay)
+	defer cancel()
+
+	var store storage.Provider
+	s3Store, err := storage.NewS3Store(cfg.ObjectStore)
+	if err != nil {
+		logger.Error("failed to start object storage")
+		os.Exit(1)
+	}
+
+	// quick health check
+	healthKey := "health-check-ping"
+	if err := s3Store.Save(initStoreCtx, healthKey, strings.NewReader("ok")); err != nil {
+		logger.Error("storage bucket is not available", "err", err)
+		os.Exit(1)
+	}
+
+	if !s3Store.Exists(initStoreCtx, healthKey) {
+		logger.Warn("storage bucket is not available or empty...")
+	}
+	logger.Info("storage bucket is available")
+
+	initialSyncDuration := 1 * time.Minute
+	syncCtx, cancelSync := context.WithTimeout(rootCtx, initialSyncDuration)
+	defer cancelSync()
+
+	if err := content.SyncAssets(syncCtx, s3Store, cfg.App.SourcesDir, logger); err != nil {
+		logger.Error("asset sync failed", "err", err)
+	} else {
+		logger.Info("asset sync completed")
+	}
+
+	store = s3Store
 
 	ns := uuid.Must(uuid.FromString(cfg.App.AssetNamespace)) // has already been validated in config
-	assetManager := content.NewAssetManager(storageProvider, ns)
+	assetManager := content.NewAssetManager(store, ns)
 
 	repo, err := content.NewLocalRepository(cfg.App.Name)
 	if err != nil {
@@ -154,7 +189,26 @@ func main() {
 		logger.Error("failed to scan data sources", "err", err)
 		os.Exit(1)
 	}
-	repo.LoadLazyMetaFromDisk(files)
+
+	var relativeFiles []string
+	cwd, err := os.Getwd()
+	if err != nil {
+		logger.Error("could not get working directory", "err", err)
+		os.Exit(1)
+	}
+
+	for _, f := range files {
+		// file paths relative to WD: /app/sources/post.md -> sources/post.md
+		rel, err := filepath.Rel(cwd, f)
+		if err == nil {
+			relativeFiles = append(relativeFiles, rel)
+		} else {
+			// fallback if it fails (unlikely)
+			relativeFiles = append(relativeFiles, f)
+		}
+	}
+
+	repo.LoadLazyMetaFromDisk(relativeFiles)
 
 	if len(repo.Data) == 0 {
 		logger.Warn("no posts found", "path", cfg.App.SourcesDir, "pattern", wantedFiles)
@@ -195,15 +249,15 @@ func main() {
 
 	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, needsInvite, cfg.Auth.InviteCode, logger, geo, tel.Tracer, metrics, session, start)
 
-	// cheap cheap vps?
+	// cheap cheap one cpu thread vps?
 	numProcs := max(1, runtime.GOMAXPROCS(0)-1)
-	imgProcessor, err := content.NewProcessor(rootCtx, cfg.App.SourcesDir, numProcs, logger)
+	imgProcessor, err := content.NewProcessor(rootCtx, store, cfg.App.SourcesDir, numProcs, logger)
 	if err != nil {
 		logger.Error("failed to start image processor", "err", err)
 		os.Exit(1)
 	}
 
-	assetHandler := &handlers.AssetHandler{Assets: assetManager, Processor: imgProcessor, Tracer: tel.Tracer, Metrics: metrics}
+	assetHandler := &handlers.AssetHandler{Assets: assetManager, Processor: imgProcessor, Tracer: tel.Tracer, Metrics: metrics, Logger: logger}
 
 	csrf := middleware.NewCSRF(cfg.App.Environment == "prod", blogHandler.RenderError)
 	csp := middleware.NewCSP(cfg.App.Environment == "prod")

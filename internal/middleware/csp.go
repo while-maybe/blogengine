@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type CSP struct {
@@ -37,10 +39,13 @@ func NewCSP(isProd bool) *CSP {
 	}
 }
 
-func (c *CSP) Middleware() Middleware {
+func (c *CSP) Middleware(tracer trace.Tracer) Middleware {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := tracer.Start(r.Context(), "middleware.CSP")
+			defer span.End()
+
 			// Content Security Policy
 			w.Header().Set("Content-Security-Policy", c.cspHeaderString)
 
@@ -55,7 +60,7 @@ func (c *CSP) Middleware() Middleware {
 			w.Header().Set("X-XSS-Protection", "1; mode=block")
 			w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

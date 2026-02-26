@@ -5,8 +5,10 @@ import (
 	"blogengine/internal/telemetry"
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
+	"mime"
 	"net/http"
-	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -23,6 +25,7 @@ type AssetHandler struct {
 	Processor content.ImageProcessorService
 	Tracer    trace.Tracer
 	Metrics   *telemetry.Metrics
+	Logger    *slog.Logger
 }
 
 const cacheForAYear = 31536000
@@ -61,10 +64,8 @@ func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cachePath := filepath.Join("data", "cache", key+".webp")
-
-	// webp already exists
-	if _, err := os.Stat(cachePath); err == nil {
+	variantKey := fmt.Sprintf("%s_%d.webp", id.String(), requestedWidth)
+	if h.Assets.Exists(ctx, variantKey) {
 		span.SetAttributes(attribute.String("cache.status", "hit"))
 		h.Metrics.CacheHitsTotal.Add(ctx, 1)
 
@@ -72,7 +73,16 @@ func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/webp")
 		// attempt to cache in the browser for a long time
 		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", cacheForAYear))
-		http.ServeFile(w, r, cachePath)
+
+		reader, err := h.Assets.RetrieveKey(ctx, variantKey) // Need to update Retrieve to accept string key?
+		if err != nil {
+			// Handle error
+			http.NotFound(w, r)
+			return
+		}
+		defer reader.Close()
+
+		io.Copy(w, reader)
 		return
 	}
 
@@ -90,8 +100,10 @@ func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// context that doesn't die when the user leaves the page
-	bgCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	bgCtx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
+
+	currentSpan := trace.SpanFromContext(r.Context())
 
 	wantedWidths := []int{800, 1200, 1920}
 	for _, w := range wantedWidths {
@@ -99,9 +111,26 @@ func (h *AssetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			SourcePath: relPath,
 			ID:         id.String(),
 			Width:      w,
+			ParentSpan: currentSpan.SpanContext(),
 		})
 	}
 
-	originalPath := filepath.Join("sources", relPath)
-	http.ServeFile(w, r, originalPath)
+	reader, err := h.Assets.Retrieve(r.Context(), id)
+	if err != nil {
+		h.Logger.Error("failed to retrieve asset from S3", "id", id, "err", err)
+		http.NotFound(w, r)
+		return
+	}
+	defer reader.Close()
+
+	ext := filepath.Ext(relPath)
+	mimeType := mime.TypeByExtension(ext)
+	if mimeType == "" {
+		mimeType = "application/octet-stream" // fallback
+	}
+	w.Header().Set("Content-Type", mimeType)
+
+	if _, err := io.Copy(w, reader); err != nil {
+		h.Logger.Warn("stream interrupted", "err", err)
+	}
 }

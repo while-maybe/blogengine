@@ -170,3 +170,25 @@ db/migrations/test:
 .PHONY: killstale
 killstale:
 	@lsof -ti:3000 | xargs kill -9
+
+.PHONY: s3/init
+s3/init:
+	@echo "Detecting node..."
+	$(eval NODE_ID := $(shell docker exec garage /garage node id | cut -d '@' -f1 | tr -d '\r'))
+	@echo "Found node ID: $(NODE_ID)"
+
+	@echo "Creating zone and applying changes..."
+	@docker exec garage /garage layout assign -z dc1 -c $(S3_BUCKET_SIZE) $(NODE_ID) || true
+	@docker exec garage /garage layout apply --version 1 || true
+	@sleep 2
+
+	@echo "Importing key..."
+	@docker exec garage /garage key import $(S3_ACCESS_KEY_ID) $(S3_SECRET_ACCESS_KEY) --yes
+
+	@echo "Creating bucket..."
+	# using	|| true continues even if bucket already exists
+	@docker exec garage /garage bucket create $(S3_BUCKET_NAME) || true
+
+	@echo "Binding key to bucket..."
+	@docker exec garage /garage bucket allow $(S3_BUCKET_NAME) --read --write --key $(S3_ACCESS_KEY_ID)
+	@echo "Garage provisioned successfully!"

@@ -15,9 +15,12 @@ type PostService interface {
 
 // MediaService defines access to binary assets
 type MediaService interface {
-	Retrieve(id uuid.UUID) (io.ReadCloser, error)
+	Retrieve(ctx context.Context, id uuid.UUID) (io.ReadCloser, error)
 	Obfuscate(path string) (uuid.UUID, error)
 	GetRelativePath(id uuid.UUID) (string, error)
+
+	RetrieveKey(ctx context.Context, key string) (io.ReadCloser, error)
+	Exists(ctx context.Context, key string) bool
 }
 
 // ImageProcessorService defines source image file processing

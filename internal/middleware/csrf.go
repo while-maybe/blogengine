@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/justinas/nosurf"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ErrorRenderer func(w http.ResponseWriter, r *http.Request, code int, title, message string)
@@ -21,8 +22,9 @@ func NewCSRF(isProd bool, renderer ErrorRenderer) *CSRF {
 	}
 }
 
-func (c *CSRF) Middleware(logger *slog.Logger) Middleware {
+func (c *CSRF) Middleware(logger *slog.Logger, tracer trace.Tracer) Middleware {
 	return func(next http.Handler) http.Handler {
+
 		csrfHandler := nosurf.New(next)
 
 		csrfHandler.SetBaseCookie(http.Cookie{
@@ -52,6 +54,11 @@ func (c *CSRF) Middleware(logger *slog.Logger) Middleware {
 
 			}))
 
-		return csrfHandler
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := tracer.Start(r.Context(), "middleware.CSRF")
+			defer span.End()
+
+			csrfHandler.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }

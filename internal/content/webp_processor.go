@@ -1,18 +1,20 @@
 package content
 
 import (
+	"blogengine/internal/storage"
+	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"image"
 	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/kolesa-team/go-webp/encoder"
 	"github.com/kolesa-team/go-webp/webp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/image/draw"
 
 	_ "image/gif"
@@ -24,30 +26,28 @@ type ImageJob struct {
 	SourcePath string
 	ID         string
 	Width      int
+	ParentSpan trace.SpanContext
 }
 
 type Processor struct {
 	jobs     chan ImageJob
 	wg       sync.WaitGroup
 	logger   *slog.Logger
-	root     *os.Root
 	inFlight sync.Map
+	store    storage.Provider
+	tracer   trace.Tracer
 }
 
 const defaultFolderPermissions = 0755
 
 var _ ImageProcessorService = (*Processor)(nil)
 
-func NewProcessor(ctx context.Context, sourcesDir string, workercount int, logger *slog.Logger) (*Processor, error) {
-	root, err := os.OpenRoot(sourcesDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open secure root: %w", err)
-	}
-
+func NewProcessor(ctx context.Context, store storage.Provider, sourcesDir string, workercount int, logger *slog.Logger) (*Processor, error) {
 	p := &Processor{
 		jobs:   make(chan ImageJob, 25),
 		logger: logger,
-		root:   root,
+		store:  store,
+		tracer: otel.Tracer("blogengine/content/processor"),
 	}
 	for i := range workercount {
 		p.wg.Go(func() {
@@ -77,7 +77,6 @@ func (p *Processor) worker(ctx context.Context, id int) {
 			}
 			key := fmt.Sprintf("%s_%d.webp", job.ID, job.Width)
 
-			p.inFlight.Store(key, struct{}{})
 			p.ProcessJob(ctx, id, job)
 			p.inFlight.Delete(key)
 		}
@@ -85,13 +84,25 @@ func (p *Processor) worker(ctx context.Context, id int) {
 }
 
 func (p *Processor) ProcessJob(ctx context.Context, id int, job ImageJob) {
-	destName := fmt.Sprintf("%s_%d.webp", job.ID, job.Width)
-	destPath := filepath.Join("data", "cache", destName)
+	link := trace.Link{
+		SpanContext: job.ParentSpan,
+	}
+
+	ctx, span := p.tracer.Start(ctx, "ProcessJob",
+		trace.WithAttributes(
+			attribute.String("image.id", job.ID),
+			attribute.Int("image.width", job.Width),
+		),
+		trace.WithLinks(link),
+	)
+	defer span.End()
+
+	destKey := fmt.Sprintf("%s_%d.webp", job.ID, job.Width)
 
 	p.logger.Info("worker processing image variants", "worker_id", id, "uuid", job.ID, "variant", job.Width)
 
 	// any other worker has done this?
-	if _, err := os.Stat(destPath); !errors.Is(err, os.ErrNotExist) {
+	if p.store.Exists(ctx, destKey) {
 		return
 	}
 
@@ -99,64 +110,66 @@ func (p *Processor) ProcessJob(ctx context.Context, id int, job ImageJob) {
 		return
 	}
 
-	sourceFile, err := p.root.Open(job.SourcePath)
+	reader, err := p.store.Open(ctx, job.SourcePath)
 	if err != nil {
-		p.logger.Error("failed to open source", "worker_id", id, "source", job.SourcePath, "err", err)
+		p.logger.Error("failed to download source", "key", job.SourcePath, "err", err)
 		return
 	}
-	defer sourceFile.Close()
+	defer reader.Close()
 
-	if err := p.generateVariant(ctx, sourceFile, destPath, job.Width); err != nil {
+	_, cpuSpan := p.tracer.Start(ctx, "GenerateVariant.CPU")
+	processedBuffer, err := p.generateVariant(ctx, reader, job.Width)
+	cpuSpan.End()
+	if err != nil {
 		p.logger.Error("variant failed", "worker", id, "variant", job.Width, "err", err)
+		return
+	}
 
-		if err := os.Remove(destPath); err != nil {
-			p.logger.Error("remove corrupt file", "path", destPath, "err", err)
-		}
+	// finally save to bucket here
+	if err := p.store.Save(ctx, destKey, processedBuffer); err != nil {
+		p.logger.Error("failed to upload variant", "key", destKey, "err", err)
 	}
 }
 
-func (p *Processor) generateVariant(ctx context.Context, r io.Reader, dest string, width int) error {
+func (p *Processor) generateVariant(ctx context.Context, r io.Reader, width int) (io.ReadSeeker, error) {
 	img, _, err := image.Decode(r)
 	if err != nil {
-		return fmt.Errorf("decode error: %w", err)
+		return nil, fmt.Errorf("decode error: %w", err)
 	}
 
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return nil, ctx.Err()
 	}
 
 	if img.Bounds().Dx() > width {
 		img = p.resizeImage(img, width)
 	}
 
-	destinationDir := filepath.Dir(dest)
-	if err := os.MkdirAll(destinationDir, defaultFolderPermissions); err != nil {
-		return fmt.Errorf("could not create directory %q, %w", destinationDir, err)
-	}
-
-	f, err := os.Create(dest)
-	if err != nil {
-		return fmt.Errorf("could not create file %q: %w", dest, err)
-	}
-	defer f.Close()
-
+	var buf bytes.Buffer
 	options, err := encoder.NewLossyEncoderOptions(encoder.PresetDefault, 75)
 	if err != nil {
-		return fmt.Errorf("could not encode image: %w", err)
+		return nil, fmt.Errorf("encoding options: %w", err)
 	}
 
-	return webp.Encode(f, img, options)
+	if err := webp.Encode(&buf, img, options); err != nil {
+		return nil, fmt.Errorf("encode error: %w", err)
+	}
+
+	return bytes.NewReader(buf.Bytes()), nil
 }
 
 func (p *Processor) Enqueue(ctx context.Context, job ImageJob) error {
 	key := fmt.Sprintf("%s_%d", job.ID, job.Width)
 
+	// no duplicated jobs
 	if _, loaded := p.inFlight.LoadOrStore(key, struct{}{}); loaded {
 		return nil
 	}
 
 	select {
 	case <-ctx.Done():
+		// should a caller's request timeout
+		p.inFlight.Delete(key)
 		return ctx.Err()
 	case p.jobs <- job:
 		return nil

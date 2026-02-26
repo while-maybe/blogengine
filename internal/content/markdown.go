@@ -128,7 +128,7 @@ func (m *MarkDownRenderer) renderImage(w util.BufWriter, _ []byte, node ast.Node
 	altText := ""
 
 	imgTag := fmt.Sprintf(
-		`<img src="%s-1200" srcset="%s" sizes="%s" alt="%s" title="%s" loading="lazy" class="post-image">`,
+		`<img src="%s_800" srcset="%s" sizes="%s" alt="%s" title="%s" loading="lazy" class="post-image">`,
 		dest, srcset, sizes, altText, title,
 	)
 

@@ -11,6 +11,10 @@ services:
 
       - SESSION_SECRET=${SESSION_SECRET}
 
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+
       - DB_PATH=${DB_PATH:-/app/data/blogengine.db}
       - DB_MIGRATIONS_PATH=${DB_MIGRATIONS_PATH:-/app/migrations}
 
@@ -31,7 +35,6 @@ services:
     networks:
       - blogengine_network
 
-
   tunnel:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
@@ -41,6 +44,26 @@ services:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     depends_on:
       - blogengine
+    networks:
+      - blogengine_network
+
+  garage:
+    image: dxflrs/garage:v2.2.0
+    container_name: garage
+    ports:
+      - "3900:3900"
+      - "3901:3901"
+      - "3902:3902"
+      - "3903:3903"
+      - "3904:3904" #k2v
+    environment:
+      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
+      - GARAGE_ADMIN_TOKEN=${GARAGE_ADMIN_TOKEN}
+      - GARAGE_ADMIN_METRICS_TOKEN=${GARAGE_METRICS_TOKEN}
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
     networks:
       - blogengine_network
 
@@ -66,12 +89,7 @@ services:
       - GF_NEWS_NEWS_FEED_ENABLED=false
       - GF_HELP_ENABLED=false
 
-      - OTEL_METRIC_EXPORT_INTERVAL=5000
-      - OTEL_LGT_DEMO_ENABLED=false
-      - HELP=false
-
     volumes:
-      - lgtm_data:/data
       - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
     networks:
@@ -88,8 +106,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
-  lgtm_data:
   blog_data:
+  garage_meta:
+  garage_data:
 
 networks:
   blogengine_network:

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestGetTopCountries(t *testing.T) {
@@ -290,7 +292,8 @@ func TestGeoStats_Middleware(t *testing.T) {
 
 			// handler does nothing
 			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-			middlewareToTest := gs.Middleware(logger)(nextHandler)
+
+			middlewareToTest := gs.Middleware(logger, noop.NewTracerProvider().Tracer(""))(nextHandler)
 
 			req, _ := http.NewRequest("GET", "/", nil)
 			req.RemoteAddr = tt.remoteAddr

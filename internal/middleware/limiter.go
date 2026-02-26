@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/time/rate"
 )
 
@@ -110,11 +111,14 @@ func getClientIPFactory(trustedProxy bool) ipClientGetter {
 	return getDirectClientIPValidated
 }
 
-func (i *IPRateLimiter) Middleware(logger *slog.Logger) Middleware {
+func (i *IPRateLimiter) Middleware(logger *slog.Logger, tracer trace.Tracer) Middleware {
 	getClientIP := getClientIPFactory(i.trustedProxy)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := tracer.Start(r.Context(), "middleware.Limiter")
+			defer span.End()
+
 			// grab the source ip address
 			ip := getClientIP(r)
 
@@ -146,7 +150,7 @@ func (i *IPRateLimiter) Middleware(logger *slog.Logger) Middleware {
 			tokens := int(limiter.Tokens()) // Current available tokens
 			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(i.burst))
 			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(tokens))
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

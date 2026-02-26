@@ -1,16 +1,22 @@
-apiVersion: 1
+apiVersion: 2
 
 datasources:
   - name: Prometheus
     type: prometheus
-    url: http://localhost:9090
+    uid: prometheus_ds
+    url: http://lgtm:9090
     access: proxy
     isDefault: true
     editable: false
+    jsonData:
+      exemplarTraceIdDestinations:
+        - name: traceID
+          datasourceUid: tempo_ds
     
   - name: Tempo
     type: tempo
-    url: http://localhost:3200
+    uid: tempo_ds
+    url: http://lgtm:3200
     access: proxy
     editable: false
     jsonData:

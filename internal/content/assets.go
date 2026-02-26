@@ -2,6 +2,7 @@ package content
 
 import (
 	"blogengine/internal/storage"
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -59,7 +60,7 @@ func (am *AssetManager) Obfuscate(path string) (uuid.UUID, error) {
 }
 
 // Retrieve returns the file stream for a given UUID
-func (am *AssetManager) Retrieve(uuid uuid.UUID) (io.ReadCloser, error) {
+func (am *AssetManager) Retrieve(ctx context.Context, uuid uuid.UUID) (io.ReadCloser, error) {
 	if uuid.IsNil() {
 		return nil, fmt.Errorf("uuid must not be nil")
 	}
@@ -72,7 +73,7 @@ func (am *AssetManager) Retrieve(uuid uuid.UUID) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("asset not found")
 	}
 
-	return am.store.Open(storedPath)
+	return am.store.Open(ctx, storedPath)
 }
 
 func (am *AssetManager) GetRelativePath(uuid uuid.UUID) (string, error) {
@@ -88,4 +89,12 @@ func (am *AssetManager) GetRelativePath(uuid uuid.UUID) (string, error) {
 	}
 
 	return path, nil
+}
+
+func (am *AssetManager) RetrieveKey(ctx context.Context, key string) (io.ReadCloser, error) {
+	return am.store.Open(ctx, key)
+}
+
+func (am *AssetManager) Exists(ctx context.Context, key string) bool {
+	return am.store.Exists(ctx, key)
 }

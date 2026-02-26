@@ -1,8 +1,12 @@
 package storage
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 type Provider interface {
-	Open(path string) (io.ReadCloser, error)
-	Exists(path string) bool
+	Open(ctx context.Context, key string) (io.ReadCloser, error)
+	Save(ctx context.Context, key string, body io.ReadSeeker) error
+	Exists(ctx context.Context, key string) bool
 }

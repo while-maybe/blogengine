@@ -7,6 +7,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type GeoStats struct {
@@ -110,10 +112,13 @@ func (g *GeoStats) GetTopCountries(n int) []*CountryStat {
 	return topN[:n]
 }
 
-func (g *GeoStats) Middleware(logger *slog.Logger) Middleware {
+func (g *GeoStats) Middleware(logger *slog.Logger, tracer trace.Tracer) Middleware {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			ctx, span := tracer.Start(r.Context(), "middleware.GeoStats")
+			defer span.End()
 
 			code := r.Header.Get("CF-IPCountry")
 			ip := getProxyClientIP(r)
@@ -123,7 +128,8 @@ func (g *GeoStats) Middleware(logger *slog.Logger) Middleware {
 				g.Record(ip, code)
 				logger.Info("geo", "ip", ip, "code", code)
 			}()
-			next.ServeHTTP(w, r)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

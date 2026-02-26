@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 	"slices"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Middleware func(next http.Handler) http.Handler
@@ -37,9 +39,11 @@ func Recover(logger *slog.Logger) Middleware {
 	}
 }
 
-func Logger(logger *slog.Logger) Middleware {
+func Logger(logger *slog.Logger, tracer trace.Tracer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := tracer.Start(r.Context(), "middleware.Logger")
+			defer span.End()
 
 			switch r.URL.Path {
 			case "/healthz", "/metrics":
@@ -49,7 +53,7 @@ func Logger(logger *slog.Logger) Middleware {
 
 			start := time.Now()
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(ctx))
 
 			logger.Info("request completed", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start))
 		})

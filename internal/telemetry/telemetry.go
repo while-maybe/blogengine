@@ -50,7 +50,9 @@ func Init(ctx context.Context, serviceName, serviceVersion, env, otelEndpoint st
 			semconv.SchemaURL,
 			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion(serviceVersion),
+			semconv.HostName(serviceName),
 			attribute.String("environment", env),
+			semconv.ServiceInstanceID(serviceName),
 		),
 	)
 	if err != nil {
