@@ -38,8 +38,6 @@ type Processor struct {
 	tracer   trace.Tracer
 }
 
-const defaultFolderPermissions = 0755
-
 var _ ImageProcessorService = (*Processor)(nil)
 
 func NewProcessor(ctx context.Context, store storage.Provider, sourcesDir string, workercount int, logger *slog.Logger) (*Processor, error) {
