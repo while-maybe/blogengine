@@ -53,13 +53,14 @@ type User struct {
 }
 
 type Comment struct {
-	ID        int64      `db:"id" json:"id"`
-	PostID    int64      `db:"post_id" json:"post_id"`
-	UserID    *int64     `db:"user_id" json:"user_id"`
-	Content   string     `db:"content" json:"content"`
-	CreatedAt time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt *time.Time `db:"updated_at" json:"updated_at,omitempty"`
-	DeletedAt *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+	ID         int64      `db:"id" json:"id"`
+	PostID     int64      `db:"post_id" json:"post_id"`
+	UserID     *int64     `db:"user_id" json:"user_id"`
+	Content    string     `db:"content" json:"content"`
+	AuthorName string     `db:"author_name" json:"author_name"`
+	CreatedAt  time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt  *time.Time `db:"updated_at" json:"updated_at,omitempty"`
+	DeletedAt  *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
 }
 
 type Blog struct {
