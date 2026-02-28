@@ -41,3 +41,10 @@ ON blogs(slug) WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
 CREATE INDEX IF NOT EXISTS idx_blogs_created_at ON blogs(created_at);
+
+CREATE TRIGGER IF NOT EXISTS trg_blogs_updated_at
+AFTER UPDATE ON blogs
+FOR EACH ROW
+BEGIN
+    UPDATE blogs SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+END;
