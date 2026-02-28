@@ -145,6 +145,12 @@ db/migrations/down:
 	@echo "running DOWN migrations..."
 	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) down
 
+## db/migrations/downone: apply ONE down database migration
+.PHONY: db/migrations/downone
+db/migrations/downone:
+	@echo "running DOWN migrations..."
+	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) down 1
+
 .PHONY: db/migrations/version
 db/migrations/version:
 	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) version

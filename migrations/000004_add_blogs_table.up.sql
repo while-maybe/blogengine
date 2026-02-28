@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS blogs (
     registration_limit INTEGER DEFAULT NULL,
 
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT NULL,
     deleted_at DATETIME DEFAULT NULL,
 
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
