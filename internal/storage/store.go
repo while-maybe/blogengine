@@ -7,6 +7,9 @@ import (
 )
 
 type Store interface {
+	// store
+	Close() error
+
 	// users
 	CreateUser(ctx context.Context, username, passwordHash string) (*User, error)
 	GetUserByID(ctx context.Context, id int64) (*User, error)
@@ -22,7 +25,15 @@ type Store interface {
 	GetCommentsForPost(ctx context.Context, postID, offset, limit int64) ([]*Comment, error)
 	GetCommentsForUserID(ctx context.Context, userID, offset, limit int64) ([]*Comment, error)
 
-	Close() error
+	// blogs
+	CreateBlog(ctx context.Context, ownerID int64, slug, title string, description *string, visibility Visibility, registrationMode RegistrationMode, registrationLimit *int64) (*Blog, error)
+	GetPublicBlogs(ctx context.Context, offset, limit int64) ([]*Blog, error)
+	GetBlogByID(ctx context.Context, blogID int64) (*Blog, error)
+	GetBlogBySlug(ctx context.Context, slug string) (*Blog, error)
+	UpdateBlog(ctx context.Context, blogID, ownerID int64, slug, title string, description *string) (*Blog, error)
+	UpdateBlogVisibility(ctx context.Context, blogID, ownerID int64, visibility Visibility) error
+	UpdateBlogRegistration(ctx context.Context, blogID, ownerID int64, registrationMode RegistrationMode, registrationLimit *int64) error
+	DeleteBlog(ctx context.Context, blogID, ownerID int64) error
 }
 
 type Visibility string
@@ -75,4 +86,20 @@ type Blog struct {
 	CreatedAt         time.Time        `db:"created_at" json:"created_at"`
 	UpdatedAt         *time.Time       `db:"updated_at" json:"updated_at,omitempty"`
 	DeletedAt         *time.Time       `db:"deleted_at" json:"deleted_at,omitempty"`
+}
+
+func (v Visibility) IsValid() bool {
+	switch v {
+	case VisibilityPublic, VisibilityPrivate:
+		return true
+	}
+	return false
+}
+
+func (r RegistrationMode) IsValid() bool {
+	switch r {
+	case RegistrationOpen, RegistrationClosed, RegistrationLimited, RegistrationInviteOnly:
+		return true
+	}
+	return false
 }

@@ -1,16 +1,240 @@
 package sqlite
 
-// id INTEGER PRIMARY KEY AUTOINCREMENT,
-// owner_id INTEGER NOT NULL, -- super admin of blog
+import (
+	"blogengine/internal/storage"
+	"context"
+	"fmt"
+	"regexp"
+)
 
-// slug TEXT NOT NULL, -- say "tech", "travel"
-// title TEXT NOT NULL,
-// description TEXT,
+const (
+	maxRegistrationQueue = 1_000
+	minSlugLen           = 5
+	maxSlugLen           = 100
+	minTitleLen          = 5
+	maxTitleLen          = 100
+	maxDescriptionLen    = 500
+)
 
-// visibility TEXT NOT NULL DEFAULT 'public',
+var (
+	validSlug = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+)
 
-// registration_mode TEXT NOT NULL DEFAULT 'open',
-// registration_limit INTEGER DEFAULT NULL,
+func (s *Store) CreateBlog(ctx context.Context, ownerID int64, slug, title string, description *string, visibility storage.Visibility, registrationMode storage.RegistrationMode, registrationLimit *int64) (*storage.Blog, error) {
+	if err := validateBlog(slug, title, description); err != nil {
+		return nil, err
+	}
+	if err := validateBlogVisibility(visibility); err != nil {
+		return nil, err
+	}
+	if err := validateBlogRegistration(registrationMode, registrationLimit); err != nil {
+		return nil, err
+	}
 
-// created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-// deleted_at DATETIME DEFAULT NULL,
+	query := `INSERT INTO blogs (owner_id, slug, title, description, visibility, registration_mode, registration_limit)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
+				RETURNING id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at`
+
+	var blog storage.Blog
+	if err := s.db.GetContext(ctx, &blog, query, ownerID, slug, title, description, visibility, registrationMode, registrationLimit); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCreateBlog, mapSqlError(err))
+	}
+
+	return &blog, nil
+}
+
+func (s *Store) GetPublicBlogs(ctx context.Context, offset, limit int64) ([]*storage.Blog, error) {
+	if offset < 0 || limit <= 0 {
+		return nil, ErrLimitOffset
+	}
+
+	query := `SELECT id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at, updated_at
+				FROM blogs
+				WHERE visibility = 'public' AND deleted_at IS NULL
+				ORDER BY created_at DESC
+				LIMIT ?
+				OFFSET ?`
+
+	var blogs []*storage.Blog
+	if err := s.db.SelectContext(ctx, &blogs, query, limit, offset); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrAllPublicBlogs, mapSqlError(err))
+	}
+	return blogs, nil
+}
+
+func (s *Store) GetBlogByID(ctx context.Context, blogID int64) (*storage.Blog, error) {
+	if blogID < 1 {
+		return nil, ErrInvalidBlogID
+	}
+
+	query := `SELECT id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at, updated_at
+				FROM blogs
+				WHERE id = ? AND deleted_at IS NULL
+				LIMIT 1`
+
+	var blog storage.Blog
+	if err := s.db.GetContext(ctx, &blog, query, blogID); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrGetBlogByID, mapSqlError(err))
+	}
+	return &blog, nil
+}
+
+func (s *Store) GetBlogBySlug(ctx context.Context, slug string) (*storage.Blog, error) {
+	if err := validateSlug(slug); err != nil {
+		return nil, err
+	}
+
+	query := `SELECT id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at, updated_at
+				FROM blogs
+				WHERE slug = ? AND deleted_at IS NULL
+				LIMIT 1`
+
+	var blog storage.Blog
+	if err := s.db.GetContext(ctx, &blog, query, slug); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrGetBlogBySlug, mapSqlError(err))
+	}
+	return &blog, nil
+}
+
+func (s *Store) UpdateBlog(ctx context.Context, blogID, ownerID int64, slug, title string, description *string) (*storage.Blog, error) {
+	if blogID < 1 || ownerID < 1 {
+		return nil, ErrNegativeIDs
+	}
+
+	if err := validateBlog(slug, title, description); err != nil {
+		return nil, err
+	}
+
+	query := `UPDATE blogs SET slug = ?, title = ?, description = ?
+				WHERE id = ? AND owner_id = ? AND deleted_at IS NULL
+				RETURNING id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at, updated_at`
+
+	var blog storage.Blog
+	if err := s.db.GetContext(ctx, &blog, query, slug, title, description, blogID, ownerID); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUpdateBlog, mapSqlError(err))
+	}
+
+	return &blog, nil
+}
+
+func (s *Store) UpdateBlogVisibility(ctx context.Context, blogID, ownerID int64, visibility storage.Visibility) error {
+	if blogID < 1 || ownerID < 1 {
+		return ErrNegativeIDs
+	}
+	if err := validateBlogVisibility(visibility); err != nil {
+		return err
+	}
+
+	query := `UPDATE blogs SET visibility = ?
+				WHERE id = ? AND owner_id = ? AND deleted_at IS NULL`
+
+	result, err := s.db.ExecContext(ctx, query, visibility, blogID, ownerID)
+	if err != nil {
+		return ErrUpdateBlogVisibility
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrBlogVisibility, mapSqlError(err))
+	}
+	if rows == 0 {
+		return storage.ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) UpdateBlogRegistration(ctx context.Context, blogID, ownerID int64, registrationMode storage.RegistrationMode, registrationLimit *int64) error {
+	if blogID < 1 || ownerID < 1 {
+		return ErrNegativeIDs
+	}
+	if err := validateBlogRegistration(registrationMode, registrationLimit); err != nil {
+		return err
+	}
+
+	query := `UPDATE blogs SET registration_mode = ?, registration_limit = ?
+				WHERE id = ? AND owner_id = ? AND deleted_at IS NULL`
+
+	result, err := s.db.ExecContext(ctx, query, registrationMode, registrationLimit, blogID, ownerID)
+	if err != nil {
+		return ErrUpdateBlogRegistration
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrUpdateBlogRegistration, mapSqlError(err))
+	}
+	if rows == 0 {
+		return storage.ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) DeleteBlog(ctx context.Context, blogID, ownerID int64) error {
+	if blogID < 1 || ownerID < 1 {
+		return ErrNegativeIDs
+	}
+
+	query := `UPDATE blogs SET deleted_at = CURRENT_TIMESTAMP
+				WHERE id = ? AND owner_id = ? AND deleted_at IS NULL`
+
+	result, err := s.db.ExecContext(ctx, query, blogID, ownerID)
+	if err != nil {
+		return ErrDeleteBlog
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrDeleteBlog, mapSqlError(err))
+	}
+	if rows == 0 {
+		return storage.ErrNotFound
+	}
+	return nil
+}
+
+func validateSlug(slug string) error {
+	if len(slug) < minSlugLen || len(slug) > maxSlugLen || !validSlug.MatchString(slug) {
+		return ErrBlogSlug
+	}
+	return nil
+}
+
+func validateBlog(slug, title string, description *string) error {
+	if err := validateSlug(slug); err != nil {
+		return err
+	}
+	if len(title) < minTitleLen || len(title) > maxTitleLen {
+		return ErrBlogTitle
+	}
+	if description != nil && len(*description) > maxDescriptionLen {
+		return ErrBlogDescription
+	}
+	return nil
+}
+
+func validateBlogVisibility(visibility storage.Visibility) error {
+	if !visibility.IsValid() {
+		return ErrBlogVisibility
+	}
+	return nil
+}
+
+func validateBlogRegistration(registrationMode storage.RegistrationMode, registrationLimit *int64) error {
+	if !registrationMode.IsValid() {
+		return ErrBlogRegistrationMode
+	}
+
+	if registrationMode == storage.RegistrationLimited {
+		if registrationLimit == nil {
+			return fmt.Errorf("%w: required for limited registration", ErrBlogRegistrationLimit)
+		}
+		if *registrationLimit < 1 || *registrationLimit > maxRegistrationQueue {
+			return fmt.Errorf("%w: min 1, max %d", ErrBlogRegistrationLimit, maxRegistrationQueue)
+		}
+	}
+
+	if registrationMode != storage.RegistrationLimited && registrationLimit != nil {
+		return ErrRegistrationValuesForMode
+	}
+	return nil
+}

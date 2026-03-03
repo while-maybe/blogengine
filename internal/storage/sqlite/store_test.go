@@ -32,7 +32,10 @@ func setupTestStore(t *testing.T) *Store {
 
 	tempDir := t.TempDir()
 	// dbPath := filepath.Join(tempDir, "test_blog.db")
-	dbPath, _ := os.CreateTemp(tempDir, "test_blog.*.db")
+	dbPath, err := os.CreateTemp(tempDir, "test_blog.*.db")
+	if err != nil {
+		t.Fatalf("could not create file in temp directory: %s", err.Error())
+	}
 
 	store, err := NewStore(dbPath.Name())
 	if err != nil {

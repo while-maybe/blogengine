@@ -106,7 +106,11 @@ func (s *Store) DeleteComment(ctx context.Context, commentID, userID int64) erro
 		return fmt.Errorf("could not delete comment: %w", mapSqlError(err))
 	}
 
-	if rows, _ := result.RowsAffected(); rows == 0 {
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("could not delete comment: %w", mapSqlError(err))
+	}
+	if rows == 0 {
 		return storage.ErrNotFound
 	}
 
@@ -132,6 +136,7 @@ func mapSqlError(err error) error {
 
 		case sqlite3.SQLITE_CONSTRAINT_CHECK:
 			return storage.ErrCheckViolation
+
 			// other sqlite specific errors
 		}
 	}
