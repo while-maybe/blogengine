@@ -139,15 +139,15 @@ db/migrations/up:
 	@echo "running UP migrations..."
 	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) up
 
-## db/migrations/down: apply all down database migrations
-.PHONY: db/migrations/down
-db/migrations/down:
+## db/migrations/down/all: apply all down database migrations
+.PHONY: db/migrations/down/all
+db/migrations/down/all:
 	@echo "running DOWN migrations..."
 	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) down
 
-## db/migrations/downone: apply ONE down database migration
-.PHONY: db/migrations/downone
-db/migrations/downone:
+## db/migrations/down/one: apply ONE down database migration
+.PHONY: db/migrations/down/one
+db/migrations/down/one:
 	@echo "running DOWN migrations..."
 	@migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) down 1
 
