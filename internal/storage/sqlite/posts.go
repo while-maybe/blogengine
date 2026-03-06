@@ -97,12 +97,12 @@ func (s *Store) genPostS3Key(ctx context.Context, blogID int64, publicID string)
 	return s3Key, nil
 }
 
-func postIdentifier(slug *string, title string) string {
-	if slug != nil {
-		return *slug
-	}
-	return utils.Slugify(title)
-}
+// func postIdentifier(slug *string, title string) string {
+// 	if slug != nil {
+// 		return *slug
+// 	}
+// 	return utils.Slugify(title)
+// }
 
 func validatePostEncryptionSettings(isEncrypted bool, encIV *string) error {
 	if !isEncrypted && encIV != nil {
