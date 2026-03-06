@@ -71,16 +71,30 @@ func TestCreateBlog(t *testing.T) {
 				ownerID = tt.ownerID
 			}
 
-			blog, err := store.CreateBlog(
-				ctx, ownerID, tt.slug, tt.title, tt.description,
-				tt.visibility, tt.registrationMode, tt.registrationLimit,
-			)
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:           ownerID,
+				Slug:              tt.slug,
+				Title:             tt.title,
+				Description:       tt.description,
+				Visibility:        tt.visibility,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
+
+			blog, err := store.CreateBlog(ctx, createBlogParams)
 
 			if tt.duplicate {
-				_, err = store.CreateBlog(
-					ctx, ownerID, tt.slug, tt.title, tt.description,
-					tt.visibility, tt.registrationMode, tt.registrationLimit,
-				)
+				createBlogParams := storage.CreateBlogParams{
+					OwnerID:           ownerID,
+					Slug:              tt.slug,
+					Title:             tt.title,
+					Description:       tt.description,
+					Visibility:        tt.visibility,
+					RegistrationMode:  tt.registrationMode,
+					RegistrationLimit: tt.registrationLimit,
+				}
+
+				_, err = store.CreateBlog(ctx, createBlogParams)
 			}
 
 			if !errors.Is(err, tt.wantErr) {
@@ -163,18 +177,38 @@ func TestGetPublicBlogs(t *testing.T) {
 			}
 
 			// create 2 public, 1 private blogs
-			_, _ = store.CreateBlog(
-				ctx, u.ID, "technology", "a tech blog", new("A blog to blog about tech things"),
-				"public", tt.registrationMode, tt.registrationLimit,
-			)
-			_, _ = store.CreateBlog(
-				ctx, u.ID, "technology2", "a tech blog", new("A blog to blog about tech things"),
-				"public", tt.registrationMode, tt.registrationLimit,
-			)
-			_, _ = store.CreateBlog(
-				ctx, u.ID, "technology3", "a tech blog", new("A blog to blog about tech things"),
-				"private", tt.registrationMode, tt.registrationLimit,
-			)
+			createBlogParamsPub1 := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              "technology",
+				Title:             "a tech blog",
+				Description:       new("A blog to blog about tech things"),
+				Visibility:        storage.VisibilityPublic,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
+
+			_, _ = store.CreateBlog(ctx, createBlogParamsPub1)
+			createBlogParamsPub2 := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              "technology2",
+				Title:             "a tech blog",
+				Description:       new("A blog to blog about tech things"),
+				Visibility:        storage.VisibilityPublic,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
+
+			_, _ = store.CreateBlog(ctx, createBlogParamsPub2)
+			createBlogParamsPriv3 := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              "technology3",
+				Title:             "a tech blog",
+				Description:       new("A blog to blog about tech things"),
+				Visibility:        storage.VisibilityPrivate,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
+			_, _ = store.CreateBlog(ctx, createBlogParamsPriv3)
 
 			blogs, err := store.GetPublicBlogs(ctx, tt.offset, tt.limit)
 			if !errors.Is(err, tt.wantErr) {
@@ -238,10 +272,17 @@ func TestGetBlogByID(t *testing.T) {
 				t.Fatalf("could not create user: %s", err)
 			}
 
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              tt.slug,
+				Title:             tt.title,
+				Description:       tt.description,
+				Visibility:        tt.visibility,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
 			newBlog1, _ := store.CreateBlog(
-				ctx, u.ID, tt.slug, tt.title, tt.description,
-				tt.visibility, tt.registrationMode, tt.registrationLimit,
-			)
+				ctx, createBlogParams)
 
 			// don't test delete in get
 			if tt.deleted {
@@ -311,10 +352,16 @@ func TestGetBlogBySlug(t *testing.T) {
 				t.Fatalf("could not create user: %s", err)
 			}
 
-			newBlog1, _ := store.CreateBlog(
-				ctx, u.ID, tt.slug, tt.title, tt.description,
-				tt.visibility, tt.registrationMode, tt.registrationLimit,
-			)
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              tt.slug,
+				Title:             tt.title,
+				Description:       tt.description,
+				Visibility:        tt.visibility,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
+			newBlog1, _ := store.CreateBlog(ctx, createBlogParams)
 
 			// don't test delete in get
 			if tt.deleted {
@@ -378,19 +425,30 @@ func TestUpdateBlog(t *testing.T) {
 				t.Fatalf("could not create user: %s", err)
 			}
 
-			// not testing create
-			b1, _ := store.CreateBlog(
-				ctx, u.ID,
-				"technology", "a tech blog", new("A blog to blog about tech things"),
-				"public", tt.registrationMode, tt.registrationLimit,
-			)
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              "technology",
+				Title:             "a tech blog",
+				Description:       new("A blog to blog about tech things"),
+				Visibility:        storage.VisibilityPublic,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
+			b1, _ := store.CreateBlog(ctx, createBlogParams)
 
 			// don't test delete
 			if tt.deleted {
 				_ = store.DeleteBlog(ctx, b1.ID, u.ID)
 			}
 
-			blog, err := store.UpdateBlog(ctx, b1.ID, b1.OwnerID, tt.slug, tt.title, tt.description)
+			updateBlogParams := storage.UpdateBlogParams{
+				BlogID:      b1.ID,
+				OwnerID:     b1.OwnerID,
+				Slug:        tt.slug,
+				Title:       tt.title,
+				Description: tt.description,
+			}
+			blog, err := store.UpdateBlog(ctx, updateBlogParams)
 
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("errors: want %s, got %s", tt.wantErr, err)
@@ -471,11 +529,16 @@ func TestUpdateBlogVisibility(t *testing.T) {
 				t.Fatalf("could not create user: %s", err)
 			}
 
-			blog, err := store.CreateBlog(
-				ctx, u.ID,
-				"technology", "a tech blog", new("A blog to blog about tech things"),
-				storage.VisibilityPublic, storage.RegistrationOpen, tt.registrationLimit,
-			)
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              "technology",
+				Title:             "a tech blog",
+				Description:       new("A blog to blog about tech things"),
+				Visibility:        storage.VisibilityPublic,
+				RegistrationMode:  storage.RegistrationOpen,
+				RegistrationLimit: tt.registrationLimit,
+			}
+			blog, err := store.CreateBlog(ctx, createBlogParams)
 			if err != nil {
 				t.Fatalf("could not create blog: %s", err)
 			}
@@ -585,11 +648,17 @@ func TestUpdateBlogRegistration(t *testing.T) {
 				t.Fatalf("could not create user: %s", err)
 			}
 
-			blog, err := store.CreateBlog(
-				ctx, u.ID,
-				"technology", "a tech blog", new("A blog to blog about tech things"),
-				storage.VisibilityPublic, storage.RegistrationOpen, nil,
-			)
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              "technology",
+				Title:             "a tech blog",
+				Description:       new("A blog to blog about tech things"),
+				Visibility:        storage.VisibilityPublic,
+				RegistrationMode:  storage.RegistrationOpen,
+				RegistrationLimit: nil,
+			}
+
+			blog, err := store.CreateBlog(ctx, createBlogParams)
 			if err != nil {
 				t.Fatalf("could not create blog: %s", err)
 			}
@@ -611,7 +680,13 @@ func TestUpdateBlogRegistration(t *testing.T) {
 				blogID = tt.blogID
 			}
 
-			err = store.UpdateBlogRegistration(ctx, blogID, ownerID, tt.registrationMode, tt.registrationLimit)
+			updateBlogRegParams := storage.UpdateBlogRegistrationParams{
+				BlogID:            blogID,
+				OwnerID:           ownerID,
+				RegistrationMode:  tt.registrationMode,
+				RegistrationLimit: tt.registrationLimit,
+			}
+			err = store.UpdateBlogRegistration(ctx, updateBlogRegParams)
 
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("errors: want %s, got %s", tt.wantErr, err)
@@ -684,11 +759,16 @@ func TestDeleteBlog(t *testing.T) {
 				t.Fatalf("could not create user: %s", err)
 			}
 
-			blog, err := store.CreateBlog(
-				ctx, u.ID,
-				"technology", "a tech blog", new("A blog to blog about tech things"),
-				storage.VisibilityPublic, storage.RegistrationOpen, nil,
-			)
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:           u.ID,
+				Slug:              "technology",
+				Title:             "a tech blog",
+				Description:       new("A blog to blog about tech things"),
+				Visibility:        storage.VisibilityPublic,
+				RegistrationMode:  storage.RegistrationOpen,
+				RegistrationLimit: nil,
+			}
+			blog, err := store.CreateBlog(ctx, createBlogParams)
 			if err != nil {
 				t.Fatalf("could not create blog: %s", err)
 			}
@@ -725,7 +805,7 @@ func TestDeleteBlog(t *testing.T) {
 	}
 }
 
-func TestValidateSlug(t *testing.T) {
+func TestValidateBlogSlug(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -778,7 +858,7 @@ func TestValidateSlug(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateSlug(tt.slug)
+			err := validateBlogSlug(tt.slug)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("errors: got %s, want %s", err, tt.wantErr)
 			}

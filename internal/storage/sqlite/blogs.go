@@ -20,14 +20,14 @@ var (
 	validSlug = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 )
 
-func (s *Store) CreateBlog(ctx context.Context, ownerID int64, slug, title string, description *string, visibility storage.Visibility, registrationMode storage.RegistrationMode, registrationLimit *int64) (*storage.Blog, error) {
-	if err := validateBlog(slug, title, description); err != nil {
+func (s *Store) CreateBlog(ctx context.Context, p storage.CreateBlogParams) (*storage.Blog, error) {
+	if err := validateBlog(p.Slug, p.Title, p.Description); err != nil {
 		return nil, err
 	}
-	if err := validateBlogVisibility(visibility); err != nil {
+	if err := validateBlogVisibility(p.Visibility); err != nil {
 		return nil, err
 	}
-	if err := validateBlogRegistration(registrationMode, registrationLimit); err != nil {
+	if err := validateBlogRegistration(p.RegistrationMode, p.RegistrationLimit); err != nil {
 		return nil, err
 	}
 
@@ -36,7 +36,7 @@ func (s *Store) CreateBlog(ctx context.Context, ownerID int64, slug, title strin
 				RETURNING id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at`
 
 	var blog storage.Blog
-	if err := s.db.GetContext(ctx, &blog, query, ownerID, slug, title, description, visibility, registrationMode, registrationLimit); err != nil {
+	if err := s.db.GetContext(ctx, &blog, query, p.OwnerID, p.Slug, p.Title, p.Description, p.Visibility, p.RegistrationMode, p.RegistrationLimit); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCreateBlog, mapSqlError(err))
 	}
 
@@ -80,7 +80,7 @@ func (s *Store) GetBlogByID(ctx context.Context, blogID int64) (*storage.Blog, e
 }
 
 func (s *Store) GetBlogBySlug(ctx context.Context, slug string) (*storage.Blog, error) {
-	if err := validateSlug(slug); err != nil {
+	if err := validateBlogSlug(slug); err != nil {
 		return nil, err
 	}
 
@@ -96,12 +96,12 @@ func (s *Store) GetBlogBySlug(ctx context.Context, slug string) (*storage.Blog, 
 	return &blog, nil
 }
 
-func (s *Store) UpdateBlog(ctx context.Context, blogID, ownerID int64, slug, title string, description *string) (*storage.Blog, error) {
-	if blogID < 1 || ownerID < 1 {
+func (s *Store) UpdateBlog(ctx context.Context, p storage.UpdateBlogParams) (*storage.Blog, error) {
+	if p.BlogID < 1 || p.OwnerID < 1 {
 		return nil, ErrNegativeIDs
 	}
 
-	if err := validateBlog(slug, title, description); err != nil {
+	if err := validateBlog(p.Slug, p.Title, p.Description); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +110,7 @@ func (s *Store) UpdateBlog(ctx context.Context, blogID, ownerID int64, slug, tit
 				RETURNING id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at, updated_at`
 
 	var blog storage.Blog
-	if err := s.db.GetContext(ctx, &blog, query, slug, title, description, blogID, ownerID); err != nil {
+	if err := s.db.GetContext(ctx, &blog, query, p.Slug, p.Title, p.Description, p.BlogID, p.OwnerID); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUpdateBlog, mapSqlError(err))
 	}
 
@@ -143,18 +143,18 @@ func (s *Store) UpdateBlogVisibility(ctx context.Context, blogID, ownerID int64,
 	return nil
 }
 
-func (s *Store) UpdateBlogRegistration(ctx context.Context, blogID, ownerID int64, registrationMode storage.RegistrationMode, registrationLimit *int64) error {
-	if blogID < 1 || ownerID < 1 {
+func (s *Store) UpdateBlogRegistration(ctx context.Context, p storage.UpdateBlogRegistrationParams) error {
+	if p.BlogID < 1 || p.OwnerID < 1 {
 		return ErrNegativeIDs
 	}
-	if err := validateBlogRegistration(registrationMode, registrationLimit); err != nil {
+	if err := validateBlogRegistration(p.RegistrationMode, p.RegistrationLimit); err != nil {
 		return err
 	}
 
 	query := `UPDATE blogs SET registration_mode = ?, registration_limit = ?
 				WHERE id = ? AND owner_id = ? AND deleted_at IS NULL`
 
-	result, err := s.db.ExecContext(ctx, query, registrationMode, registrationLimit, blogID, ownerID)
+	result, err := s.db.ExecContext(ctx, query, p.RegistrationMode, p.RegistrationLimit, p.BlogID, p.OwnerID)
 	if err != nil {
 		return ErrUpdateBlogRegistration
 	}
@@ -192,7 +192,7 @@ func (s *Store) DeleteBlog(ctx context.Context, blogID, ownerID int64) error {
 	return nil
 }
 
-func validateSlug(slug string) error {
+func validateBlogSlug(slug string) error {
 	if len(slug) < minSlugLen || len(slug) > maxSlugLen || !validSlug.MatchString(slug) {
 		return ErrBlogSlug
 	}
@@ -200,7 +200,7 @@ func validateSlug(slug string) error {
 }
 
 func validateBlog(slug, title string, description *string) error {
-	if err := validateSlug(slug); err != nil {
+	if err := validateBlogSlug(slug); err != nil {
 		return err
 	}
 	if len(title) < minTitleLen || len(title) > maxTitleLen {
