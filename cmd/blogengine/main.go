@@ -233,6 +233,19 @@ func main() {
 
 	logger.Info("database migrated successfully")
 
+	if _, err := db.GetUserByUsername(rootCtx, "admin"); err != nil {
+		// check if error is anything but ErrNotFound
+		if !errors.Is(err, storage.ErrNotFound) {
+			logger.Error("could not check for admin user", "error", err)
+			os.Exit(1)
+		}
+		// ErrNotFound: attempt to Bootstrap db
+		if err := db.Bootstrap(rootCtx, logger); err != nil {
+			logger.Error("could not bootstrap db", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	// session manager
 	sessionLifetime := 24 * time.Hour
 	session := middleware.NewSessionManager(sessionLifetime, cfg.App.Environment == "prod", db.RawDB())
