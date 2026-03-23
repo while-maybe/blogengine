@@ -48,14 +48,16 @@ func (s *Store) GetPublicBlogs(ctx context.Context, offset, limit int64) ([]*sto
 		return nil, ErrLimitOffset
 	}
 
-	query := `SELECT id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at, updated_at
-				FROM blogs
-				WHERE visibility = 'public' AND deleted_at IS NULL
-				ORDER BY created_at DESC
+	query := `SELECT b.id, b.owner_id, b.slug, b.title, b.description, b.visibility, b.registration_mode, b.registration_limit, b.created_at, b.updated_at,
+		u.username AS owner_name
+				FROM blogs AS b
+				JOIN users AS u ON u.id = b.owner_id
+				WHERE b.visibility = 'public' AND b.deleted_at IS NULL
+				ORDER BY b.created_at DESC
 				LIMIT ?
 				OFFSET ?`
 
-	var blogs []*storage.Blog
+	blogs := make([]*storage.Blog, 0)
 	if err := s.db.SelectContext(ctx, &blogs, query, limit, offset); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAllPublicBlogs, mapSqlError(err))
 	}
@@ -77,6 +79,29 @@ func (s *Store) GetBlogByID(ctx context.Context, blogID int64) (*storage.Blog, e
 		return nil, fmt.Errorf("%w: %w", ErrGetBlogByID, mapSqlError(err))
 	}
 	return &blog, nil
+}
+
+// GetBlogsByUserID returns all blogs including the private blogs. It is meant to list a user's own blogs (hence no privacy differentiation)
+func (s *Store) GetBlogsByUserID(ctx context.Context, ownerID, offset, limit int64) ([]*storage.Blog, error) {
+	if offset < 0 || limit <= 0 {
+		return nil, fmt.Errorf("%w: %w", ErrBlogsByUserID, ErrLimitOffset)
+	}
+	if ownerID < 1 {
+		return nil, fmt.Errorf("%w: %w", ErrBlogsByUserID, ErrInvalidOwnerID)
+	}
+
+	query := `SELECT id, owner_id, slug, title, description, visibility, registration_mode, registration_limit, created_at, updated_at
+				FROM blogs
+				WHERE owner_id = ? AND deleted_at IS NULL
+				ORDER BY created_at DESC
+				LIMIT ?
+				OFFSET ?`
+
+	blogs := make([]*storage.Blog, 0)
+	if err := s.db.SelectContext(ctx, &blogs, query, ownerID, limit, offset); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrBlogsByUserID, err)
+	}
+	return blogs, nil
 }
 
 func (s *Store) GetBlogBySlug(ctx context.Context, slug string) (*storage.Blog, error) {

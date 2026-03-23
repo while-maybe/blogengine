@@ -1,0 +1,39 @@
+package components
+
+type InputConfig struct {
+    Type         string
+    Name         string
+    ID           string
+    Placeholder  string
+    Required     bool
+    Autofocus    bool
+    Autocomplete string
+    Value        string
+    MinLength    string
+    Class        string 
+    Attributes   templ.Attributes
+}
+
+templ FormInput(cfg InputConfig, icon templ.Component) {
+    <div class="form-group relative">
+        <label for={ cfg.ID } class="sr-only">{ cfg.Placeholder }</label>
+        
+        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
+            @icon
+        </div>
+
+        <input 
+            type={ cfg.Type } 
+            id={ cfg.ID } 
+            name={ cfg.Name } 
+            value={ cfg.Value }
+            placeholder={ cfg.Placeholder }
+            required?={ cfg.Required }
+            autofocus?={ cfg.Autofocus }
+            autocomplete={ cfg.Autocomplete }
+            minlength={ cfg.MinLength }
+            { cfg.Attributes... }
+            class="w-full pl-10 pr-4 py-2.5 bg-brand-dark border border-brand-edge rounded-lg text-text-main placeholder:text-text-muted transition-all outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        />
+    </div>
+}

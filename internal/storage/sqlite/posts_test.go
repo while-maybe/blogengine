@@ -115,7 +115,6 @@ func TestCreatePost(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-
 			store, user, blog := setupTestBlog(t)
 
 			blogID := blog.ID
@@ -152,7 +151,7 @@ func TestCreatePost(t *testing.T) {
 				AuthorID:     authorID,
 				Slug:         tt.slug,
 				Title:        "Title of the post",
-				Description:  new("Description of the blog"),
+				Description:  new("Description of the post"),
 				IsEncrypted:  tt.isEncrypted,
 				EncryptionIV: tt.EncIV,
 				IsListed:     true,
@@ -162,6 +161,161 @@ func TestCreatePost(t *testing.T) {
 			_, err = store.CreatePost(ctx, p)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("errors: want %s, got %s", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestGetLatestPublicPosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		blog2Private  bool
+		postsUnlisted bool
+		isDraft       bool
+		limit         int64
+		offset        int64
+		wantLen       int
+		wantErr       error
+	}{
+		{
+			name:   "nominal",
+			offset: 0, limit: 5,
+			wantLen: 2,
+			wantErr: nil,
+		},
+		{
+			name:   "one listed post, two unlisted",
+			offset: 0, limit: 5,
+			postsUnlisted: true,
+			wantLen:       1,
+			wantErr:       nil,
+		},
+		{
+			name:   "one listed post, two draft",
+			offset: 0, limit: 5,
+			isDraft: true,
+			wantLen: 1,
+			wantErr: nil,
+		},
+		{
+			name:   "one listed post, other blog private",
+			offset: 0, limit: 5,
+			blog2Private: true,
+			wantLen:      1,
+			wantErr:      nil,
+		},
+		{
+			name:   "bad offset",
+			offset: -1, limit: 5,
+			wantLen: 1,
+			wantErr: ErrLatestPublicPosts,
+		},
+		{
+			name:   "bad limit",
+			offset: 0, limit: 0,
+			wantLen: 1,
+			wantErr: ErrLatestPublicPosts,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// create default setup
+			ctx := context.Background()
+			store, user1, blog1 := setupTestBlog(t)
+			p := storage.CreatePostParams{
+				BlogID:      blog1.ID,
+				AuthorID:    user1.ID,
+				Slug:        nil,
+				Title:       "Title of the post",
+				Description: new("Description of the post"),
+				IsListed:    true,
+				PublishedAt: new(time.Now().Add(-24 * time.Hour)),
+			}
+
+			var err error
+			_, err = store.CreatePost(ctx, p)
+			if err != nil {
+				t.Fatalf("could not create first test post: %s", err)
+			}
+
+			// add another user
+			user2, err := store.CreateUser(ctx, "test_user_2", gen60CharString())
+			if err != nil {
+				t.Fatalf("could not create second test user: %s", err)
+			}
+
+			blog2Visibility := storage.VisibilityPublic
+			if tt.blog2Private {
+				blog2Visibility = storage.VisibilityPrivate
+			}
+
+			// add one public blog for second user
+			createBlogParams := storage.CreateBlogParams{
+				OwnerID:          user2.ID,
+				Slug:             "another-blog-slug",
+				Title:            "blog title goes here",
+				Description:      new("A blog to blog about tech things"),
+				Visibility:       blog2Visibility,
+				RegistrationMode: storage.RegistrationOpen,
+			}
+			blog2, err := store.CreateBlog(ctx, createBlogParams)
+			if err != nil {
+				t.Fatalf("could not create second test blog: %s", err)
+			}
+
+			published_at := new(time.Now().Add(-1 * time.Hour))
+			if tt.isDraft {
+				published_at = nil
+			}
+			postListed := true
+			if tt.postsUnlisted {
+				postListed = false
+			}
+
+			// add one public and one private posts
+			p2 := storage.CreatePostParams{
+				BlogID:      blog2.ID,
+				AuthorID:    user2.ID,
+				Slug:        nil,
+				Title:       "Title of the post",
+				Description: new("Description of the post"),
+				IsListed:    postListed,
+				PublishedAt: published_at,
+			}
+			_, err = store.CreatePost(ctx, p2)
+			if err != nil {
+				t.Fatalf("could not create first test post: %s", err)
+			}
+
+			// post 2 is never visible
+			p3 := storage.CreatePostParams{
+				BlogID:      blog2.ID,
+				AuthorID:    user2.ID,
+				Slug:        nil,
+				Title:       "Title of the second post",
+				Description: new("Description of the second post"),
+				IsListed:    false,
+				PublishedAt: published_at,
+			}
+			_, err = store.CreatePost(ctx, p3)
+			if err != nil {
+				t.Fatalf("could not create second test post: %s", err)
+			}
+
+			results, err := store.GetLatestPublicPosts(ctx, tt.offset, tt.limit)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("errors: want %s, got %s", tt.wantErr, err)
+			}
+			if tt.wantErr != nil {
+				return
+			}
+
+			if len(results) != tt.wantLen {
+				t.Fatalf("results mismatch: want %d, got %d", tt.wantLen, len(results))
 			}
 		})
 	}

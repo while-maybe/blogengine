@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     gcc \
+    sqlite3 \
     libc6-dev \
     libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -47,6 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebp7 \
     ca-certificates \
     curl \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Add non-root user: # -S = system user, -G = add to group

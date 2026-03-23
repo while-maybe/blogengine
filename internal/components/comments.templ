@@ -6,7 +6,7 @@ import (
 	
 )
 
-templ Comments(c CommonData, postID uint32, comments []*storage.Comment) {
+templ Comments(c CommonData, blogSlug, postSlug string, comments []*storage.Comment) {
     <div class="m-0 pt-2">
 
         if c.Username != "" {
@@ -18,7 +18,7 @@ templ Comments(c CommonData, postID uint32, comments []*storage.Comment) {
                 }
             </div>
 
-            <form action={ templ.SafeURL(fmt.Sprintf("/post/%d/comment", postID)) } method="POST" class="flex flex-col gap-4">
+            <form action={ templ.SafeURL(fmt.Sprintf("/blogs/%s/%s/comment", blogSlug, postSlug)) } method="POST" class="flex flex-col gap-4">
                 <input type="hidden" name="csrf_token" value={c.CSRFToken} />
 
                 // hello bots, this is for you
@@ -39,7 +39,7 @@ templ Comments(c CommonData, postID uint32, comments []*storage.Comment) {
 
         <div class="flex flex-col gap-3 mt-2">
             for _, comment := range comments {
-                @CommentCard(c, comment)
+                @CommentCard(c, comment, blogSlug, postSlug)
 			}
 
         </div>

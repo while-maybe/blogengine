@@ -12,15 +12,27 @@ templ Login(c CommonData, errorMessage string) {
 
                 <form action="/login" method="POST">
                     <input type="hidden" name="csrf_token" value={ c.CSRFToken } />
-                    <div class="form-group">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" id="username" name="username" class="form-input" placeholder="Enter username" required minlength="3" autofocus autocomplete="username"/>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required minlength="8" autocomplete="current-password"/>
-                    </div>
+                    @FormInput(InputConfig{
+                        Type:         "text",
+                        Name:         "username",
+                        ID:           "username",
+                        Placeholder:  "Username",
+                        Required:     true,
+                        Autofocus:    true,
+                        Autocomplete: "username",
+                        MinLength: "3",
+                    }, IconUser())
+
+                    @FormInput(InputConfig{
+                        Type:         "password",
+                        Name:         "password",
+                        ID:           "password",
+                        Placeholder:  "Password",
+                        Required:     true,
+                        Autocomplete: "current-password",
+                        MinLength: "8",
+                    }, IconLock())
 
                     <button type="submit" class="btn-primary mt-4">
                         Login

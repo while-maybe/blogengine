@@ -21,6 +21,10 @@
   /* Layout */
   --spacing-header: 3.5rem;
   --width-page: 75rem;
+
+  /* blog card background */
+  --color-brand-card-alt: #1f273a;
+
 }
 
 
@@ -66,7 +70,7 @@
 
 @layer components {
 
-  /* 2. Now you can @apply 'btn-base' */
+  /* @apply 'btn-base' */
   .btn-primary {
     @apply btn-base bg-accent text-brand-dark hover:opacity-90 shadow-lg shadow-accent/20;
   }
@@ -107,7 +111,7 @@
   }
   
   .footer-banner {
-    @apply w-full h-10 flex flex-col justify-center items-center;
+    @apply w-full h-9 flex flex-col justify-center items-center;
     background-image:linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 0.9));
     /* @apply border border-amber-300; */
   }
@@ -141,7 +145,7 @@
 
   .markdown-body pre code {
     @apply block bg-transparent p-1;
-    @apply text-gray-200 font-mono text-lg leading-snug;
+    @apply text-gray-200 font-mono leading-snug;
     @apply border-none;
   }
   
@@ -160,7 +164,7 @@
   }
 
   .post-list {
-    @apply flex flex-col gap-7;
+    @apply flex flex-col gap-5;
   }
 
   .post-list-card {
@@ -239,6 +243,25 @@
     .post-list-card-action:hover svg {
     filter: drop-shadow(0 0 8px var(--color-accent));
     }
+
+  .blog-list-card {
+    @apply grid grid-cols-[3.75rem_1fr_2.5rem] grid-rows-[auto_auto_auto] content-between;
+    @apply border border-brand-edge/30 rounded-xl overflow-hidden;
+    @apply transition-all hover:border-accent/50 hover:translate-x-1;
+    @apply h-[100px] lg:h-[140px];
+    @apply lg:grid-cols-[5rem_1fr_4rem] lg:h-32;
+    @apply lg:p-3 lg:gap-x-3;
+    @apply shadow-lg shadow-black/50;
+    @apply transition-transform hover:-translate-y-1;
+    
+    /* slightly different background to differentiate */
+    @apply bg-brand-card-alt;
+    
+    grid-template-areas: 
+      "image title action"
+      "image description action"
+      "author meta action";
+  }
 }
   
   .copy-btn {

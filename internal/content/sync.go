@@ -40,10 +40,6 @@ func SyncAssets(ctx context.Context, store storage.Provider, sourceDir string, l
 		if err != nil {
 			return err
 		}
-		// absCwd, err := filepath.Abs(".")
-		// if err != nil {
-		// 	return err
-		// }
 
 		relPath, err := filepath.Rel(sourceDir, absPath)
 		if err != nil {

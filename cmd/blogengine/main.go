@@ -19,6 +19,7 @@ import (
 	"blogengine/internal/handlers"
 	"blogengine/internal/middleware"
 	"blogengine/internal/router"
+	"blogengine/internal/seeder"
 	"blogengine/internal/storage"
 	"blogengine/internal/storage/sqlite"
 	"blogengine/internal/telemetry"
@@ -246,6 +247,17 @@ func main() {
 		}
 	}
 
+	seedTimeout := 2 * time.Minute
+	seedCtx, cancelSeed := context.WithTimeout(rootCtx, seedTimeout)
+	defer cancelSeed()
+
+	seeder := seeder.NewSeeder(db, store, cfg.App.SourcesDir, logger)
+	if err := seeder.Seed(seedCtx); err != nil {
+		logger.Error("seeding failed", "err", err)
+		// if seeding fails, carry on
+	}
+	logger.Info("seeding completed")
+
 	// session manager
 	sessionLifetime := 24 * time.Hour
 	session := middleware.NewSessionManager(sessionLifetime, cfg.App.Environment == "prod", db.RawDB())
@@ -260,7 +272,25 @@ func main() {
 
 	needsInvite := cfg.Auth.InviteCode != ""
 
-	blogHandler := handlers.NewBlogHandler(repo, db, renderer, cfg.App.Name, needsInvite, cfg.Auth.InviteCode, logger, geo, tel.Tracer, metrics, session, start)
+	// TODO refactor from OldBlogHandler
+	// blogHandler := handlers.OldBlogHandler(repo, db, renderer, cfg.App.Name, needsInvite, cfg.Auth.InviteCode, logger, geo, tel.Tracer, metrics, session, start)
+
+	handlerCfg := handlers.HandlerConfig{
+		Title:       cfg.App.Name,
+		NeedsInvite: needsInvite,
+		InviteCode:  cfg.Auth.InviteCode,
+		DB:          db,
+		S3:          *s3Store,
+		GeoStats:    geo,
+		Renderer:    renderer,
+		Logger:      logger,
+		Tracer:      tel.Tracer,
+		Metrics:     metrics,
+		Sessions:    session,
+		StartTime:   start,
+	}
+
+	blogHandler := handlers.NewHandler(handlerCfg)
 
 	// cheap cheap one cpu thread vps?
 	numProcs := max(1, runtime.GOMAXPROCS(0)-1)

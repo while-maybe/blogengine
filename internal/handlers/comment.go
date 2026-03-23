@@ -25,16 +25,17 @@ func (h *BlogHandler) HandleComment() http.Handler {
 			return
 		}
 
-		// we should get "post" "postID" "comment"
-		postIDStr := r.PathValue("id")
-		postID, err := strconv.ParseInt(postIDStr, 10, 64)
+		blogSlug := r.PathValue("blog_slug")
+		postSlug := r.PathValue("post_slug")
+
+		post, err := h.DB.GetPostBySlugOrPublicID(r.Context(), blogSlug, postSlug)
 		if err != nil {
 			h.NotFound(w, r)
 			return
 		}
 
 		// find where to send the user to (don't trust Referer much)
-		redirectTo := fmt.Sprintf("/post/%d", postID)
+		redirectTo := fmt.Sprintf("/blogs/%s/%s", blogSlug, postSlug)
 
 		// validate
 		content := strings.TrimSpace(r.FormValue("content"))
@@ -46,12 +47,12 @@ func (h *BlogHandler) HandleComment() http.Handler {
 		}
 
 		// save if valid
-		if _, err := h.DB.CreateComment(r.Context(), postID, userID, content); err != nil {
+		if _, err := h.DB.CreateComment(r.Context(), post.ID, userID, content); err != nil {
 			h.InternalError(w, r, err)
 			return
 		}
 
-		h.Logger.Info("new comment", "user_id", userID, "post_id", postID)
+		h.Logger.Info("new comment", "user_id", userID, "post_id", post.ID)
 
 		// all good, redirect to same page to show the page with newly created comment
 		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
@@ -60,25 +61,21 @@ func (h *BlogHandler) HandleComment() http.Handler {
 
 func (h *BlogHandler) HandleDeleteComment() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// "POST /post/{id}/comment/{commentID}/delete"
-		postIDStr := r.PathValue("id")
-		postID, err := strconv.ParseInt(postIDStr, 10, 64)
-		if err != nil {
-			h.NotFound(w, r)
+		// check auth
+		userID := h.Sessions.Manager.GetInt64(r.Context(), "userID")
+		if userID == 0 {
+			h.Unauthorised(w, r)
 			return
 		}
+
+		blogSlug := r.PathValue("blog_slug")
+		postSlug := r.PathValue("post_slug")
+		redirectTo := fmt.Sprintf("/blogs/%s/%s", blogSlug, postSlug)
 
 		commentIDStr := r.PathValue("commentID")
 		commentID, err := strconv.ParseInt(commentIDStr, 10, 64)
 		if err != nil {
 			h.NotFound(w, r)
-			return
-		}
-
-		// check auth
-		userID := h.Sessions.Manager.GetInt64(r.Context(), "userID")
-		if userID == 0 {
-			h.Unauthorised(w, r)
 			return
 		}
 
@@ -94,7 +91,6 @@ func (h *BlogHandler) HandleDeleteComment() http.Handler {
 
 		h.Logger.Info("comment deleted", "user_id", userID, "comment_id", commentID)
 
-		redirectTo := fmt.Sprintf("/post/%d", postID)
 		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 	})
 }

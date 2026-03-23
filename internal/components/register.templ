@@ -12,20 +12,37 @@ templ Register(c CommonData, errorMessage string, needInvite bool) {
 
                 <form action="/register" method="POST">
                  <input type="hidden" name="csrf_token" value={ c.CSRFToken } />
-                    <div class="form-group">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" id="username" name="username" class="form-input" placeholder="Enter username" required minlength="3" autofocus/>
-                    </div>
+                    
+                    @FormInput(InputConfig{
+                        Type:         "text",
+                        Name:         "username",
+                        ID:           "username",
+                        Placeholder:  "Username",
+                        Required:     true,
+                        Autofocus:    true,
+                        Autocomplete: "username",
+                        MinLength:  "3",
+                    }, IconUser())
 
-                    <div class="form-group">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required minlength="8" autocomplete="new-password"/>
-                    </div>
+                    @FormInput(InputConfig{
+                        Type:         "password",
+                        Name:         "password",
+                        ID:           "password",
+                        Placeholder:  "Password",
+                        Required:     true,
+                        Autocomplete: "current-password",
+                        MinLength:  "8",
+                    }, IconLock())
 
-                    <div class="form-group">
-                        <label for="confirm_password" class="form-label">Confirm Password</label>
-                        <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="••••••••" required autocomplete="new-password"/>
-                    </div>
+                    @FormInput(InputConfig{
+                        Type:         "password",
+                        Name:         "confirm_password",
+                        ID:           "confirm_password",
+                        Placeholder:  "Confirm password",
+                        Required:     true,
+                        Autocomplete: "new-password",
+                        MinLength:  "8",
+                    }, IconLock())
                     
                     if needInvite {
                         <div class="form-group">

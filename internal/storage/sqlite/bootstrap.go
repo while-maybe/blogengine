@@ -2,7 +2,6 @@ package sqlite
 
 import (
 	"blogengine/internal/storage"
-	"blogengine/internal/utils"
 	"context"
 	"errors"
 	"fmt"
@@ -13,10 +12,7 @@ import (
 
 const (
 	defaultAdminUsername = "admin"
-	defaultAdminPassword = "admin"
-
-	defaultStarterBlogTitle       = "Hello World starter blog"
-	defaultStarterBlogDescription = "this is the initial blog created upon database bootstrapping"
+	defaultAdminPassword = "adminadmin"
 )
 
 var (
@@ -35,13 +31,6 @@ func (s *Store) Bootstrap(ctx context.Context, logger *slog.Logger) error {
 		return err
 	}
 	logger.Info("admin user created", "user", adminUser.Username)
-
-	defaultBlog, err := s.getOrCreateDefaultBlog(ctx, logger, adminUser.ID, defaultStarterBlogTitle)
-	if err != nil {
-		return err
-	}
-	logger.Info("default blog created", "title", defaultBlog.Title, "slug", defaultBlog.Slug)
-
 	return nil
 }
 
@@ -65,33 +54,4 @@ func (s *Store) getOrCreateAdminUser(ctx context.Context, logger *slog.Logger) (
 		}
 	}
 	return u, nil
-}
-
-func (s *Store) getOrCreateDefaultBlog(ctx context.Context, logger *slog.Logger, ownerId int64, starterBlogTitle string) (*storage.Blog, error) {
-	slug := utils.Slugify(starterBlogTitle)
-
-	blog, err := s.GetBlogBySlug(ctx, slug)
-	// return if error is anything except ErrNotFound
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, err
-	}
-	if err == nil {
-		logger.Warn("default blog already exists, skipping", "title", blog.Title, "slug", blog.Slug)
-		return blog, nil
-	}
-	createBlogParams := storage.CreateBlogParams{
-		OwnerID:           ownerId,
-		Slug:              slug,
-		Title:             starterBlogTitle,
-		Description:       new(defaultStarterBlogDescription),
-		Visibility:        storage.VisibilityPublic,
-		RegistrationMode:  storage.RegistrationClosed,
-		RegistrationLimit: nil,
-	}
-	blog, err = s.CreateBlog(
-		ctx, createBlogParams)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrCreateDefaultBlog, err)
-	}
-	return blog, nil
 }

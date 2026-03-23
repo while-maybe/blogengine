@@ -1,0 +1,58 @@
+package components
+
+import "blogengine/internal/storage"
+
+templ Blog(blog *storage.Blog, posts []*storage.Post, c CommonData) {
+    @baseTemplate(c) {
+        <main class="main-content flex flex-col">
+            <section class="blog-header">
+                <h1>{ blog.Title }</h1>
+                if blog.Description != nil {
+                    <p class="mb-8">{ *blog.Description } </p>
+                }
+            </section>
+
+                if len(posts) > 0 {
+            <section class="posts-section">
+                    <ul class="post-list">
+                        for _, p := range posts {
+                            <li class="post-list-card">
+                                <div class="post-list-card-image">
+                                    { getFirstRune(p.AuthorName) }
+                                </div>
+
+                                <p class="post-list-card-title">
+                                    <a href={ templ.SafeURL("/blogs/" + p.BlogSlug + "/" + derefString(p.Slug, p.PublicID)) }>
+                                        { p.Title }
+                                    </a>
+                                </p>
+
+                                <p class="post-list-card-description">
+                                    { derefString(p.Description, "") }
+                                </p>
+
+                                <p class="post-list-card-author">
+                                    { p.AuthorName }
+                                </p>
+
+                                <p class="post-list-card-meta">
+                                    { derefTime(p.PublishedAt, "") }
+                                </p>
+
+                                <a href={ templ.SafeURL("/blogs/" + p.BlogSlug + "/" + derefString(p.Slug, p.PublicID)) } class="post-list-card-action group" title="Read post">
+                                    <svg class="w-6 h-6 text-accent transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+            </section>
+            } else {
+                <section class="flex flex-col grow justify-center items-center">
+                    <p class="text-center text-4xl md:text-5xl font-serif font-bold text-brand-edge">This blog doesn't have posts yet...</p>
+                </section>
+            }
+        </main>
+    }
+}

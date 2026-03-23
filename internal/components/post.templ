@@ -15,10 +15,20 @@ func getCommentsMessage(comments []*storage.Comment) string {
     return fmt.Sprintf("%s Comments", numComments)
 }
 
-templ BlogPost(c CommonData, postID uint32, content templ.Component, comments []*storage.Comment){
+templ Post(c CommonData, post *storage.Post, content templ.Component, comments []*storage.Comment){
     @baseTemplate(c) {
 
     <div class="layout-container">
+
+        <header class="post-header mb-8">
+            <h1>{ post.Title }</h1>
+            if post.Description != nil {
+                <p class="post-description">{ *post.Description }</p>
+            }
+            <p class="post-meta italic">
+                <span class="text-accent">{ post.AuthorName }</span> published on { derefTime(post.PublishedAt, "") }
+            </p>
+        </header>
 
         <main class="markdown-body">
             
@@ -30,7 +40,7 @@ templ BlogPost(c CommonData, postID uint32, content templ.Component, comments []
         
             @Separator(getCommentsMessage(comments))
             
-            @Comments(c, postID, comments)
+            @Comments(c, post.BlogSlug, derefString(post.Slug, post.PublicID), comments)
 
         </section>
 

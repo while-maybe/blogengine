@@ -37,6 +37,10 @@ type Store interface {
 
 	// posts
 	CreatePost(ctx context.Context, params CreatePostParams) (*Post, error)
+	GetLatestPublicPosts(ctx context.Context, offset, limit int64) ([]*Post, error)
+	GetAllPostPublicIDs(ctx context.Context) ([]string, error)
+	GetPostsByBlogID(ctx context.Context, blogID, offset, limit int64) ([]*Post, error)
+	GetPostBySlugOrPublicID(ctx context.Context, blogSlug, postIdentifier string) (*Post, error)
 }
 
 type Visibility string
@@ -80,6 +84,7 @@ type Comment struct {
 type Blog struct {
 	ID                int64            `db:"id"`
 	OwnerID           int64            `db:"owner_id"`
+	OwnerName         string           `db:"owner_name"`
 	Slug              string           `db:"slug"`
 	Title             string           `db:"title"`
 	Description       *string          `db:"description"`
@@ -119,7 +124,9 @@ type UpdateBlogRegistrationParams struct {
 type Post struct {
 	ID            int64      `db:"id"`
 	BlogID        int64      `db:"blog_id"`
+	BlogSlug      string     `db:"blog_slug"`
 	AuthorID      int64      `db:"author_id"`
+	AuthorName    string     `db:"author_name"`
 	PublicID      string     `db:"public_id"`
 	Slug          *string    `db:"slug"`
 	Title         string     `db:"title"`
@@ -137,6 +144,7 @@ type Post struct {
 }
 
 type CreatePostParams struct {
+	PublicID      string
 	BlogID        int64
 	AuthorID      int64
 	Slug          *string
@@ -149,6 +157,8 @@ type CreatePostParams struct {
 	AllowComments bool
 	PublishedAt   *time.Time
 }
+
+const PublicIDLen = 12
 
 func (v Visibility) IsValid() bool {
 	switch v {

@@ -47,7 +47,7 @@ templ MobileMenu(c CommonData) {
         </svg>
     </label>
 
-    <div id="mobile-nav" class="fixed inset-0 z-40 bg-brand-dark/95 opacity-95 backdrop-blur-sm transition-transform duration-200 ease-in-out translate-x-full peer-checked:translate-x-0 md:hidden flex flex-col justify-start items-end gap-4 pr-5 pt-6">
+    <div id="mobile-nav" class="fixed inset-0 z-40 bg-brand-dark/95 opacity-95 backdrop-blur-sm transition-transform duration-200 ease-in-out translate-x-full peer-checked:translate-x-0 md:hidden flex flex-col justify-start items-end gap-3 pr-5 pt-6">
 
         <label for="mobile-menu-toggle" class="fixed inset-0 z-30 hidden peer-checked:block cursor-default" aria-hidden="true"></label>
 
@@ -69,8 +69,10 @@ templ MobileMenu(c CommonData) {
         @Separator("Go to...")
     
         <a href="/" class="text-xl text-text-main hover:text-accent">Home</a>
-
         <a href="/about" class="text-xl text-text-main hover:text-accent">About</a>
+        <a href="/privacy" class="text-xl text-text-main hover:text-accent">Privacy</a>
+        <a href="/terms" class="text-xl text-text-main hover:text-accent">Terms</a>
+        <a href="/contact" class="text-xl text-text-main hover:text-accent">Contact</a>
 
     </div>
 

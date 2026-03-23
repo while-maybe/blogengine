@@ -46,6 +46,7 @@ func NewMarkDownRenderer(assets MediaService) *MarkDownRenderer {
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(util.Prioritized(&assetTransformer{assets: assets}, 100)),
+			parser.WithASTTransformers(util.Prioritized(&h1Stripper{}, 200)),
 		),
 	)
 	return m
@@ -67,6 +68,8 @@ func (m *MarkDownRenderer) Render(source []byte) ([]byte, error) {
 type assetTransformer struct {
 	assets MediaService
 }
+
+type h1Stripper struct{}
 
 func (a *assetTransformer) Transform(node *ast.Document, reader text.Reader, pc parser.Context) {
 	ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -99,7 +102,27 @@ func (a *assetTransformer) Transform(node *ast.Document, reader text.Reader, pc 
 
 		return ast.WalkContinue, nil
 	})
+}
 
+func (h *h1Stripper) Transform(node *ast.Document, reader text.Reader, pc parser.Context) {
+	ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+
+		heading, ok := n.(*ast.Heading)
+		if !ok {
+			return ast.WalkContinue, nil
+		}
+
+		// strip first h1 only
+		if heading.Level == 1 {
+			heading.Parent().RemoveChild(heading.Parent(), heading)
+			return ast.WalkStop, nil
+		}
+
+		return ast.WalkContinue, nil
+	})
 }
 
 func isExternalLink(s string) bool {

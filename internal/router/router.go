@@ -50,12 +50,14 @@ func NewRouter(deps RouterDependencies) http.Handler {
 	appMux.Handle("GET /login", deps.BlogHandler.HandleLoginPage())
 	appMux.Handle("POST /login", authStack(deps.BlogHandler.HandleLogin()))
 	appMux.Handle("POST /logout", authStack(deps.BlogHandler.HandleLogout()))
-	appMux.Handle("POST /post/{id}/comment", authStack(deps.BlogHandler.HandleComment()))
-	appMux.Handle("POST /post/{id}/comment/{commentID}/delete", authStack(deps.BlogHandler.HandleDeleteComment()))
+	appMux.Handle("POST /blogs/{blog_slug}/{post_slug}/comment", authStack(deps.BlogHandler.HandleComment()))
+	appMux.Handle("POST /blogs/{blog_slug}/{post_slug}/comment/{commentID}/delete", authStack(deps.BlogHandler.HandleDeleteComment()))
 
 	// routes
-	appMux.Handle("GET /{$}", deps.BlogHandler.HandleIndex())
-	appMux.Handle("GET /post/{id}", deps.BlogHandler.HandlePost())
+	appMux.Handle("GET /{$}", deps.BlogHandler.HandleHome())
+	appMux.Handle("GET /blogs/{blog_slug}", deps.BlogHandler.HandleBlog())
+	appMux.Handle("GET /blogs/{blog_slug}/{post_slug}", deps.BlogHandler.HandlePost())
+	// appMux.Handle("GET /post/{id}", deps.BlogHandler.HandlePost())
 
 	appMux.HandleFunc("/", deps.BlogHandler.NotFound)
 

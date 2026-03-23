@@ -235,3 +235,6 @@ vendor/
 
 # dynamincally tailwind generated style.css
 static/style.css
+
+# auto-generated folder structure
+sources/

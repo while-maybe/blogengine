@@ -55,6 +55,7 @@ func (s *S3Store) Open(ctx context.Context, key string) (io.ReadCloser, error) {
 	objOutput, err := s.client.GetObject(ctx, obj)
 	if err != nil {
 		span.RecordError(err)
+		span.End()
 		return nil, err
 	}
 

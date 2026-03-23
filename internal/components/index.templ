@@ -1,8 +1,9 @@
 package components
 
 import (
-    "fmt"
-    "blogengine/internal/content"
+	"blogengine/internal/storage"
+	"time"
+	
 )
 
 func getFirstRune(s string) string {
@@ -13,35 +14,52 @@ func getFirstRune(s string) string {
     return "?"
 }
 
-templ Home(posts []*content.Post, c CommonData) {
+func derefString(s *string, fallback string) string {
+    if s == nil {
+        return fallback
+    }
+    return *s
+}
+
+func derefTime(t *time.Time, fallback string) string {
+    if t == nil {
+        return fallback
+    }
+    return (*t).Format("02-01-2006")
+}
+
+templ Home(blogs []*storage.Blog, posts []*storage.Post, c CommonData) {
     @baseTemplate(c) {
 		<main class="main-content">
+
+		<section class="blogs-section mb-8">
+			<h2>Blogs</h2>
 			<ul class="post-list">
-				for _, p := range posts {
-					<li class="post-list-card">
+				for _, b := range blogs {
+					<li class="blog-list-card">
 						<div class="post-list-card-image">
-							{ getFirstRune(p.Author) }						
+							{ getFirstRune(b.Title) }						
 						</div>
 
 						<p class="post-list-card-title">
-							<a href={ templ.SafeURL(fmt.Sprintf("/post/%d", p.ID)) }>
-								{ p.Title } 
+							<a href={ templ.SafeURL("/blogs/" + b.Slug) }>
+								{ b.Title }
 							</a>
 						</p>
 
 						<p class="post-list-card-description">
-							{ p.Description }
+							{ derefString(b.Description, "blog has no description...") }
 						</p>
 
 						<p class="post-list-card-author">
-							{ p.Author }
+							{ b.OwnerName }
 						</p>
 
 						<p class="post-list-card-meta">
-							{ p.ModifiedAt.Format("02-01-2006") }
+							{ b.CreatedAt.Format("02-01-2006") }
 						</p>
 
-						<a href={ templ.SafeURL(fmt.Sprintf("/post/%d", p.ID)) } class="post-list-card-action group" title="Read post">
+						<a href={ templ.SafeURL("/blogs/" + b.Slug) } class="post-list-card-action group" title="Read blog">
 							<svg class="w-6 h-6 text-accent transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
 							</svg>
@@ -49,6 +67,45 @@ templ Home(posts []*content.Post, c CommonData) {
 					</li>
 				}
 			</ul>
+		</section>
+	
+		<section class="posts-section">
+			<h2>Latest Posts</h2>
+			<ul class="post-list">
+				for _, p := range posts {
+					<li class="post-list-card">
+						<div class="post-list-card-image">
+							{ getFirstRune(p.AuthorName) }						
+						</div>
+
+						<p class="post-list-card-title">
+							<a href={ templ.SafeURL("/blogs/" + p.BlogSlug + "/" + derefString(p.Slug, p.PublicID)) }>
+								{ p.Title } 
+							</a>
+						</p>
+
+						<p class="post-list-card-description">
+							{ derefString(p.Description, "post has no description...") }
+						</p>
+
+						<p class="post-list-card-author">
+							{ p.AuthorName }
+						</p>
+
+						<p class="post-list-card-meta">
+							{ derefTime(p.PublishedAt, "") }
+						</p>
+
+						<a href={ templ.SafeURL("/blogs/" + p.BlogSlug + "/" + derefString(p.Slug, p.PublicID)) } class="post-list-card-action group" title="Read post">
+							<svg class="w-6 h-6 text-accent transition-transform duration-200 ease-out group-hover:translate-x-1 group-active:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+							</svg>
+            			</a>
+					</li>
+				}
+			</ul>
+		</section>
+
 		</main>
     }
 }

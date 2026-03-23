@@ -304,6 +304,122 @@ func TestGetBlogByID(t *testing.T) {
 	}
 }
 
+func TestGetBlogsByUserID(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                string
+		ownerID             int64
+		offset              int64
+		limit               int64
+		hasUserWithoutBlogs bool
+		wantDeletedBlogs    bool
+		wantResultLen       int
+		wantErr             error
+	}{
+		{
+			name:   "nominal",
+			offset: 0, limit: 10,
+			wantResultLen: 2,
+			wantErr:       nil,
+		},
+		{
+			name:   "bad offset",
+			offset: -1, limit: 10,
+			wantErr: ErrBlogsByUserID,
+		},
+		{
+			name:   "bad limit",
+			offset: 0, limit: 0,
+			wantErr: ErrBlogsByUserID,
+		},
+		{
+			name:   "user without blogs",
+			offset: 0, limit: 10,
+			hasUserWithoutBlogs: true,
+			wantResultLen:       0,
+			wantErr:             nil,
+		},
+		{
+			name:   "deleted user blogs",
+			offset: 0, limit: 10,
+			wantDeletedBlogs: true,
+			wantResultLen:    0,
+			wantErr:          nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			store := setupTestStore(t)
+			ctx := context.Background()
+
+			u, err := store.CreateUser(ctx, "admin", gen60CharString())
+			if err != nil {
+				t.Fatalf("could not create user: %s", err)
+			}
+
+			createBlog1Params := storage.CreateBlogParams{
+				OwnerID:          u.ID,
+				Slug:             "a-blog-slug",
+				Title:            "A Blog Title",
+				Description:      nil,
+				Visibility:       storage.VisibilityPublic,
+				RegistrationMode: storage.RegistrationOpen,
+			}
+			b1, err := store.CreateBlog(ctx, createBlog1Params)
+			if err != nil {
+				t.Fatalf("could not create first test blog")
+			}
+
+			createBlog2Params := storage.CreateBlogParams{
+				OwnerID:          u.ID,
+				Slug:             "another-blog-slug",
+				Title:            "Another Blog Title",
+				Description:      nil,
+				Visibility:       storage.VisibilityPrivate,
+				RegistrationMode: storage.RegistrationOpen,
+			}
+			b2, err := store.CreateBlog(ctx, createBlog2Params)
+			if err != nil {
+				t.Fatalf("could not create first test blog")
+			}
+
+			ownerID := u.ID
+
+			if tt.hasUserWithoutBlogs {
+				u2, err := store.CreateUser(ctx, "user2", gen60CharString())
+				if err != nil {
+					t.Fatalf("could not create user: %s", err)
+				}
+				ownerID = u2.ID
+			}
+
+			if tt.wantDeletedBlogs {
+				if err := store.DeleteBlog(ctx, b1.ID, ownerID); err != nil {
+					t.Fatalf("could not delete first test blog: %s", err)
+				}
+				if err := store.DeleteBlog(ctx, b2.ID, ownerID); err != nil {
+					t.Fatalf("could not delete second test blog: %s", err)
+				}
+			}
+
+			result, err := store.GetBlogsByUserID(ctx, ownerID, tt.offset, tt.limit)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("errors: want %s, got %s", tt.wantErr, err)
+			}
+			if tt.wantErr != nil {
+				return
+			}
+
+			if len(result) != tt.wantResultLen {
+				t.Fatalf("unexpected results: want %d, got %d", tt.wantResultLen, len(result))
+			}
+		})
+	}
+}
+
 func TestGetBlogBySlug(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

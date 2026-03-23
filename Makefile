@@ -1,5 +1,6 @@
 BINARY_NAME=blogengine
 MAIN_PACKAGE=./cmd/blogengine
+DOCKER_DB_PATH ?= /app/data/blogengine.db
 
 # export GOEXPERIMENT := jsonv2
 
@@ -172,6 +173,11 @@ db/migrations/test:
 	@echo "Re-applying UP migrations passed"
 	@rm -f test.db
 	@echo "All migration tests passed!"
+
+.PHONY: docker/db/query
+docker/db/query:
+# usage: make docker/db/query Q="SELECT * FROM posts"
+	@docker compose exec blogengine sqlite3 $(DOCKER_DB_PATH) "$(Q)"
 
 .PHONY: killstale
 killstale:
